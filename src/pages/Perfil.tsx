@@ -7,6 +7,7 @@ export default function Perfil() {
   const [nome, setNome] = useState('Diego');
   const [dataNascimento, setDataNascimento] = useState('');
   const [cpf, setCpf] = useState('');
+  const [pixKey, setPixKey] = useState('');
   const [erro, setErro] = useState('');
 
   // Máscara para Data de Nascimento (DD/MM/AAAA)
@@ -128,7 +129,9 @@ export default function Perfil() {
           <input 
             type="text" 
             placeholder="E-mail, CPF ou Telefone"
-            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-brazil-blue focus:bg-white transition-all" 
+            value={pixKey}
+            onChange={(e) => setPixKey(e.target.value)}
+            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-brazil-blue focus:bg-white transition-all font-medium" 
           />
         </div>
 
