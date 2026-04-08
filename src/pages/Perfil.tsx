@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { UserCircle2, Key, ShieldCheck, LogOut, Calendar, Fingerprint, AlertCircle } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
+import { useNavigate } from 'react-router-dom';
 
 export default function Perfil() {
+  const navigate = useNavigate();
   const [nome, setNome] = useState('Diego');
   const [dataNascimento, setDataNascimento] = useState('');
   const [cpf, setCpf] = useState('');
@@ -144,10 +146,33 @@ export default function Perfil() {
       </div>
 
       {/* Menu Secundário */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <button className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors">
-          <LogOut size={18} className="text-red-400" />
-          <span className="text-sm font-bold text-red-500">Sair do Aplicativo</span>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+        <button 
+          onClick={() => alert('Configurações estarão disponíveis na próxima atualização.')}
+          className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors border-b border-gray-50"
+        >
+          <div className="text-brazil-green"><ShieldCheck size={18} /></div>
+          <span className="text-sm font-bold text-gray-700">Configurações da Conta</span>
+        </button>
+        
+        <button 
+          onClick={() => alert('Redirecionando para o WhatsApp de Suporte...')}
+          className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors border-b border-gray-50"
+        >
+          <div className="text-brazil-blue"><AlertCircle size={18} /></div>
+          <span className="text-sm font-bold text-gray-700">Central de Ajuda</span>
+        </button>
+
+        <button 
+          onClick={() => {
+            // Lógica de Sair (Limpa o cache e volta pro Login)
+            localStorage.clear();
+            navigate('/login');
+          }}
+          className="w-full flex items-center gap-3 p-4 hover:bg-red-50 transition-colors"
+        >
+          <LogOut size={18} className="text-red-500" />
+          <span className="text-sm font-bold text-red-600">Sair da Conta</span>
         </button>
       </div>
 

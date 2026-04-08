@@ -1,25 +1,12 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
-import { Calendar as CalendarIcon, Trophy, MapPin, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Calendar as CalendarIcon, MapPin, Clock } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
+import { rodadaAtual } from '../data/rodada';
 
 export default function Calendario() {
-  const [tab, setTab] = useState<'brasileirao' | 'copa'>('brasileirao');
-
-  const jogosBrasileirao = [
-    { id: 101, data: '11/04', hora: '19:00', mandante: 'Botafogo', mandanteImg: '⭐', visitante: 'Vasco', visitanteImg: '💢', local: 'Nilton Santos' },
-    { id: 102, data: '12/04', hora: '16:00', mandante: 'Flamengo', mandanteImg: '🔴⚫', visitante: 'Palmeiras', visitanteImg: '🟢⚪', local: 'Maracanã' },
-    { id: 103, data: '12/04', hora: '16:00', mandante: 'São Paulo', mandanteImg: '🔴⚪', visitante: 'Corinthians', visitanteImg: '⚫⚪', local: 'Morumbis' },
-    { id: 104, data: '13/04', hora: '20:00', mandante: 'Grêmio', mandanteImg: '🔵⚪', visitante: 'Internacional', visitanteImg: '🔴⚪', local: 'Arena do Grêmio' },
-  ];
-
-  const jogosCopa = [
-    { id: 201, data: '08/06', hora: '15:00', mandante: 'Brasil', mandanteImg: '🇧🇷', visitante: 'França', visitanteImg: '🇫🇷', local: 'Estádio Nacional' },
-    { id: 202, data: '09/06', hora: '12:00', mandante: 'Argentina', mandanteImg: '🇦🇷', visitante: 'Espanha', visitanteImg: '🇪🇸', local: 'Arena Central' },
-    { id: 203, data: '10/06', hora: '15:00', mandante: 'Portugal', mandanteImg: '🇵🇹', visitante: 'Alemanha', visitanteImg: '🇩🇪', local: 'Estádio de Lusail' },
-  ];
-
-  const listaAtual = tab === 'brasileirao' ? jogosBrasileirao : jogosCopa;
+  const navigate = useNavigate();
+  const [abaAtiva, setAbaAtiva] = useState<'brasileirao' | 'copa'>('brasileirao');
 
   return (
     <div className="p-4 space-y-6 pb-24 bg-gray-50 min-h-screen">
@@ -27,79 +14,99 @@ export default function Calendario() {
         <title>Calendário de Jogos | Bolão Brasil</title>
       </Helmet>
 
-      <div className="space-y-2">
+      {/* Cabeçalho */}
+      <div className="space-y-1">
         <h2 className="text-2xl font-black text-brazil-blue">Calendário</h2>
-        <p className="text-sm text-gray-500">Acompanhe as datas e horários para não perder nenhum palpite.</p>
+        <p className="text-sm text-gray-500">
+          Acompanhe as datas e horários para não perder nenhum palpite.
+        </p>
       </div>
 
-      {/* Abas de Seleção */}
-      <div className="flex bg-white p-1 rounded-xl border border-gray-100 shadow-sm">
+      {/* Abas */}
+      <div className="flex bg-white rounded-xl border border-gray-100 p-1 shadow-sm">
         <button 
-          onClick={() => setTab('brasileirao')}
-          className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${tab === 'brasileirao' ? 'bg-brazil-blue text-white shadow-md' : 'text-gray-400'}`}
+          onClick={() => setAbaAtiva('brasileirao')}
+          className={`flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-lg transition-all ${
+            abaAtiva === 'brasileirao' ? 'bg-brazil-blue text-white shadow-md' : 'text-gray-400 hover:text-brazil-blue'
+          }`}
         >
           Brasileirão
         </button>
         <button 
-          onClick={() => setTab('copa')}
-          className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${tab === 'copa' ? 'bg-brazil-green text-white shadow-md' : 'text-gray-400'}`}
+          onClick={() => setAbaAtiva('copa')}
+          className={`flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-lg transition-all ${
+            abaAtiva === 'copa' ? 'bg-brazil-blue text-white shadow-md' : 'text-gray-400 hover:text-brazil-blue'
+          }`}
         >
           Copa do Mundo
         </button>
       </div>
 
-      {/* Lista de Jogos */}
-      <div className="space-y-4">
-        {listaAtual.map((jogo) => (
-          <motion.div 
-            key={jogo.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm"
-          >
-            <div className="flex justify-between items-center border-b border-gray-50 pb-3 mb-3">
-              <div className="flex items-center gap-2 text-gray-400">
-                <CalendarIcon size={14} />
-                <span className="text-[10px] font-bold uppercase">{jogo.data}</span>
-              </div>
-              <div className="flex items-center gap-2 text-brazil-blue">
-                <Clock size={14} />
-                <span className="text-[10px] font-black">{jogo.hora}</span>
-              </div>
-            </div>
+      {/* Lista de Jogos Dinâmica */}
+      {abaAtiva === 'brasileirao' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="font-bold text-gray-700">Rodada #{rodadaAtual.numero}</h3>
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-brazil-green/10 text-brazil-green px-2 py-1 rounded-md">Ao Vivo</span>
+          </div>
 
-            <div className="flex items-center justify-between gap-4 py-2">
-              <div className="flex flex-col items-center flex-1 text-center">
-                <span className="text-2xl mb-1">{jogo.mandanteImg}</span>
-                <span className="text-xs font-black text-gray-800 uppercase">{jogo.mandante}</span>
+          {rodadaAtual.jogos.map((jogo) => (
+            <div key={jogo.id} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm relative overflow-hidden">
+              <div className="flex justify-between items-center mb-4 border-b border-gray-50 pb-3">
+                <div className="flex items-center gap-1.5 text-gray-400">
+                  <CalendarIcon size={14} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">{jogo.data}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-brazil-blue">
+                  <Clock size={14} />
+                  <span className="text-xs font-black">{jogo.hora}</span>
+                </div>
               </div>
               
-              <div className="flex flex-col items-center">
-                <span className="text-[10px] font-black text-gray-300">VS</span>
-                <button className="mt-2 bg-brazil-yellow text-brazil-blue text-[9px] font-black px-3 py-1 rounded-full shadow-sm">
-                  PALPITAR
-                </button>
+              <div className="flex items-center justify-between gap-4">
+                {/* Time da Casa */}
+                <div className="flex flex-col items-center flex-1 gap-2">
+                  <img src={jogo.homeLogo} alt={jogo.home} className="w-12 h-12 object-contain" />
+                  <span className="text-[11px] font-black text-gray-800 uppercase tracking-wide text-center">{jogo.home}</span>
+                </div>
+                
+                {/* VS / Botão Palpitar */}
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-gray-300 font-black text-xs">VS</span>
+                  <button 
+                    onClick={() => navigate('/palpites')}
+                    className="bg-brazil-yellow text-brazil-blue font-black text-[10px] px-4 py-2 rounded-full uppercase tracking-wider shadow-sm hover:scale-105 transition-transform"
+                  >
+                    Palpitar
+                  </button>
+                </div>
+
+                {/* Time Visitante */}
+                <div className="flex flex-col items-center flex-1 gap-2">
+                  <img src={jogo.awayLogo} alt={jogo.away} className="w-12 h-12 object-contain" />
+                  <span className="text-[11px] font-black text-gray-800 uppercase tracking-wide text-center">{jogo.away}</span>
+                </div>
               </div>
 
-              <div className="flex flex-col items-center flex-1 text-center">
-                <span className="text-2xl mb-1">{jogo.visitanteImg}</span>
-                <span className="text-xs font-black text-gray-800 uppercase">{jogo.visitante}</span>
+              {/* Local */}
+              <div className="mt-4 pt-3 border-t border-gray-50 flex items-center justify-center gap-1.5 text-gray-400">
+                <MapPin size={12} />
+                <span className="text-[9px] font-bold uppercase tracking-wider">A Definir</span>
               </div>
             </div>
+          ))}
+        </div>
+      )}
 
-            <div className="mt-3 pt-3 border-t border-gray-50 flex items-center justify-center gap-1 text-[9px] font-bold text-gray-400 uppercase tracking-widest">
-              <MapPin size={10} className="text-brazil-green" />
-              {jogo.local}
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {tab === 'copa' && (
-        <div className="bg-brazil-green/10 border border-brazil-green/20 rounded-xl p-4 flex items-center gap-4">
-          <Trophy className="text-brazil-green shrink-0" size={24} />
-          <p className="text-[10px] text-brazil-green font-bold leading-relaxed uppercase">
-            Bolão da Copa Liberado! Comece a analisar os grupos e garanta sua vaga nas ligas nacionais.
+      {/* Placeholder da Copa */}
+      {abaAtiva === 'copa' && (
+        <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center space-y-3">
+          <div className="w-16 h-16 bg-brazil-yellow/20 rounded-full flex items-center justify-center mx-auto mb-2">
+            <span className="text-3xl">🏆</span>
+          </div>
+          <h3 className="font-black text-gray-800">Grupos da Copa 2026</h3>
+          <p className="text-xs text-gray-500 leading-relaxed">
+            A tabela oficial da Copa do Mundo FIFA 2026 será liberada após o sorteio dos grupos.
           </p>
         </div>
       )}

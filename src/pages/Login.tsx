@@ -1,19 +1,28 @@
 import React, { useState } from 'react';
 import { Phone, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
   const [telefone, setTelefone] = useState('');
   const [enviado, setEnviado] = useState(false);
 
   const handleEnviarLink = () => {
-    if (telefone.length < 10) {
-      alert('Digite um número de WhatsApp válido.');
+    if (telefone.length < 14) {
+      alert('Digite um número de WhatsApp válido com DDD.');
       return;
     }
     
-    // Futura integração com a WhatsApp Cloud API da Velo
     setEnviado(true);
+    
+    // Simula o tempo do usuário ir no WhatsApp, clicar no link e o sistema autenticar
+    setTimeout(() => {
+      login(telefone); // Salva no cérebro
+      navigate('/'); // Manda pra Home
+    }, 2500);
   };
 
   return (

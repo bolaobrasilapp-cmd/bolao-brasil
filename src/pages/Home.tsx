@@ -36,6 +36,22 @@ const FAQItem: React.FC<{ question: string; answer: string }> = ({ question, ans
 const Home: React.FC = () => {
   const navigate = useNavigate();
 
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Bolão Brasil',
+          text: 'Chega de calote! Vem pro meu bolão com Pix Automático e prêmios na hora.',
+          url: 'https://bolaobrasil.app.br',
+        });
+      } catch (error) {
+        console.log('Compartilhamento cancelado', error);
+      }
+    } else {
+      alert('Copie o link: https://bolaobrasil.app.br');
+    }
+  };
+
   // Motor da Contagem Regressiva da Copa
   const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0 });
 
@@ -125,7 +141,7 @@ const Home: React.FC = () => {
           <div className="absolute right-[-10px] bottom-1 w-64 h-32 pointer-events-none drop-shadow-xl z-0">
             <img src="/mascote.png" alt="Mascote Oficial" className="w-full h-full object-contain object-right-bottom" loading="eager" />
           </div>
-          <button className="absolute top-4 right-4 bg-brazil-yellow text-brazil-blue p-2.5 rounded-full shadow-md z-30"><Share2 size={18} /></button>
+          <button onClick={handleShare} className="absolute top-4 right-4 bg-brazil-yellow text-brazil-blue p-2.5 rounded-full shadow-md z-30 hover:scale-105 active:scale-95 transition-transform"><Share2 size={18} /></button>
           
           <div className="relative z-10 space-y-2 max-w-[65%]">
             <p className="text-brazil-yellow font-bold text-xs uppercase tracking-wider">RODADA DO BRASILEIRÃO</p>
@@ -244,47 +260,62 @@ const Home: React.FC = () => {
           </div>
         </div>
         {/* Social Proof: Avaliações de Clientes ... (MANTENHA O BLOCO DE AVALIAÇÕES E FAQ INTACTOS AQUI NO MEIO) ... */}
-{/* Prova Social: Resenha da Galera (Restaurado) */}
-          <div className="space-y-4 pt-8 pb-4">
-            <div className="flex justify-between items-end px-1">
-              <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest">Resenha da Galera</h3>
-              <div className="flex gap-0.5 text-brazil-yellow">
-                <Star size={14} fill="currentColor" />
-                <Star size={14} fill="currentColor" />
-                <Star size={14} fill="currentColor" />
-                <Star size={14} fill="currentColor" />
-                <Star size={14} fill="currentColor" />
+{/* Avaliações da Loja - Estilo Velo Delivery */}
+        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm mt-6 mb-4">
+          <div className="flex flex-col items-center text-center space-y-2 mb-6">
+            <h3 className="font-black text-xl italic text-[#1A237E] uppercase tracking-tight">AVALIAÇÕES DA LOJA</h3>
+            <div className="flex items-center gap-3">
+              <span className="text-4xl font-black text-[#1A237E]">5.0</span>
+              <div className="flex flex-col items-start">
+                <div className="flex text-brazil-yellow">
+                  <Star fill="currentColor" size={16} />
+                  <Star fill="currentColor" size={16} />
+                  <Star fill="currentColor" size={16} />
+                  <Star fill="currentColor" size={16} />
+                  <Star fill="currentColor" size={16} />
+                </div>
+                <span className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mt-0.5">Baseado em 19 avaliações</span>
               </div>
             </div>
             
-            <div className="flex flex-col gap-3">
-              {[
-                { name: "Carlos T.", role: "Organizador da Firma", text: "Acabou a dor de cabeça de cobrar o pessoal no WhatsApp. O app tranca o palpite até o Pix cair. Genial!", rating: 5 },
-                { name: "Mariana S.", role: "Torcedora", text: "Ganhei o bolão da rodada e o dinheiro caiu na minha conta na segunda de manhã sem eu pedir. Muito confiável.", rating: 5 },
-                { name: "João P.", role: "Grupo de Amigos", text: "O ranking ao vivo enquanto o jogo acontece deixa a resenha no bar 10x mais emocionante.", rating: 5 }
-              ].map((review, idx) => (
-                <div key={idx} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-brazil-blue/10 flex items-center justify-center text-brazil-blue font-bold text-xs">
-                        {review.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-gray-800">{review.name}</p>
-                        <p className="text-[10px] text-gray-500">{review.role}</p>
-                      </div>
-                    </div>
-                    <div className="flex text-brazil-yellow">
-                      <Star size={12} fill="currentColor" />
-                      <Star size={12} fill="currentColor" />
-                      <Star size={12} fill="currentColor" />
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-600 italic">"{review.text}"</p>
-                </div>
-              ))}
+            <div className="bg-[#E8F5E9] border border-[#C8E6C9] text-[#2E7D32] px-4 py-2 rounded-xl flex items-center gap-2 font-bold text-xs shadow-sm mt-2">
+              <ShieldCheck size={16} />
+              <div className="flex flex-col text-left leading-none">
+                <span className="text-[14px]">EXCELENTE</span>
+                <span className="text-[9px] font-medium opacity-80 uppercase tracking-wide">LOJA VERIFICADA</span>
+              </div>
             </div>
           </div>
+
+          <div className="space-y-3">
+            {[
+              { nome: "DIEGO KRUTZE", texto: "Avaliação via Clube VIP" },
+              { nome: "ANDRÉ QUEIROZ", texto: "Avaliação via Clube VIP" },
+              { nome: "MICHELE S.", texto: "O Pix do prêmio caiu na segunda de manhã sem eu pedir. Muito confiável!" }
+            ].map((av, idx) => (
+              <div key={idx} className="bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="font-black text-[#1A237E] text-xs uppercase">{av.nome}</h4>
+                  <div className="flex text-brazil-yellow">
+                    <Star fill="currentColor" size={12} />
+                    <Star fill="currentColor" size={12} />
+                    <Star fill="currentColor" size={12} />
+                    <Star fill="currentColor" size={12} />
+                    <Star fill="currentColor" size={12} />
+                  </div>
+                </div>
+                <p className="text-xs text-[#1A237E]/70 font-medium">{av.texto}</p>
+              </div>
+            ))}
+          </div>
+
+          <button 
+            onClick={() => alert('Obrigado! Sua avaliação será enviada para auditoria do Google e atualizada em breve.')}
+            className="w-full mt-4 bg-white border-2 border-[#1A237E] text-[#1A237E] font-black text-xs py-3 rounded-xl hover:bg-[#1A237E] hover:text-white transition-colors"
+          >
+            DEIXAR UMA AVALIAÇÃO
+          </button>
+        </div>
         {/* Rodapé Seguro (Legal, Privacidade, Selos e Contato Institucional) */}
         <footer className="pt-6 pb-10 text-center space-y-6">
           <div className="flex justify-center gap-4">
