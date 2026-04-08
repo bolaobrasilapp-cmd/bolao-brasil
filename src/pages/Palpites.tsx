@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { ShieldAlert, CheckCircle2, Star, Copy, Loader2, QrCode } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
+import { rodadaAtual } from '../data/rodada';
 
 export default function Palpites() {
   // Máquina de estados para controlar o fluxo da tela
@@ -16,14 +17,34 @@ export default function Palpites() {
   ];
 
   // Simula a comunicação com a Efí e o Firebase
-  const handleSaveAndPay = () => {
+  const handleSaveAndPay = async () => {
     setStep('gerando_pix');
     
-    // Simula o tempo do backend gerar a cobrança na Efí Bank
-    setTimeout(() => {
-      setPixCopiaECola('00020126580014br.gov.bcb.pix0136efi-bank-simulado-bolao-123456520400005303986540520.005802BR5912Bolao Brasil6009Sao Paulo62070503***6304ABCD');
-      setStep('checkout');
-    }, 2000);
+    try {
+      const response = await fetch('/api/gerar-pix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          valor: 20.00,
+          cpf: '00000000000', // Aqui você pode puxar do seu estado de Perfil depois
+          nome: 'Jogador Teste',
+          descricao: 'Entrada Bolão Brasil - Rodada #12'
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.sucesso) {
+        setPixCopiaECola(data.copiaECola);
+        setStep('checkout');
+      } else {
+        alert('Erro ao gerar Pix: ' + data.detalhe);
+        setStep('palpites');
+      }
+    } catch (err) {
+      alert('Falha na conexão com o banco.');
+      setStep('palpites');
+    }
   };
 
   const handleCopyPix = () => {
@@ -53,29 +74,32 @@ export default function Palpites() {
           </div>
 
           <div className="space-y-4">
-            {matches.map((match) => (
+            {rodadaAtual.jogos.map((match) => (
               <div key={match.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm relative overflow-hidden">
                 <div className="text-center mb-3">
                   <span className="bg-gray-100 text-gray-500 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
-                    {match.time}
+                    {match.data}, {match.hora}
                   </span>
                 </div>
                 
                 <div className="flex items-center justify-between gap-2">
+                  {/* Time Casa */}
                   <div className="flex flex-col items-center flex-1">
-                    <div className="text-2xl mb-1">{match.homeImg}</div>
-                    <span className="text-xs font-bold text-gray-800 truncate w-full text-center">{match.home}</span>
+                    <img src={match.homeLogo} alt={match.home} className="w-10 h-10 object-contain mb-1" />
+                    <span className="text-[11px] font-bold text-gray-800 truncate w-full text-center">{match.home}</span>
                   </div>
                   
+                  {/* Inputs Placar */}
                   <div className="flex items-center gap-2">
-                    <input type="number" className="w-12 h-12 bg-gray-50 border-2 border-gray-200 rounded-xl text-center text-xl font-black text-brazil-blue focus:border-brazil-green focus:ring-0 outline-none transition-colors" placeholder="-" min="0" max="99" />
+                    <input type="number" className="w-11 h-11 bg-gray-50 border-2 border-gray-200 rounded-xl text-center text-xl font-black text-brazil-blue focus:border-brazil-green focus:ring-0 outline-none transition-colors" placeholder="-" />
                     <span className="text-gray-400 font-bold">X</span>
-                    <input type="number" className="w-12 h-12 bg-gray-50 border-2 border-gray-200 rounded-xl text-center text-xl font-black text-brazil-blue focus:border-brazil-green focus:ring-0 outline-none transition-colors" placeholder="-" min="0" max="99" />
+                    <input type="number" className="w-11 h-11 bg-gray-50 border-2 border-gray-200 rounded-xl text-center text-xl font-black text-brazil-blue focus:border-brazil-green focus:ring-0 outline-none transition-colors" placeholder="-" />
                   </div>
 
+                  {/* Time Visitante */}
                   <div className="flex flex-col items-center flex-1">
-                    <div className="text-2xl mb-1">{match.awayImg}</div>
-                    <span className="text-xs font-bold text-gray-800 truncate w-full text-center">{match.away}</span>
+                    <img src={match.awayLogo} alt={match.away} className="w-10 h-10 object-contain mb-1" />
+                    <span className="text-[11px] font-bold text-gray-800 truncate w-full text-center">{match.away}</span>
                   </div>
                 </div>
               </div>
