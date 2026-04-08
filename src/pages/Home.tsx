@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -35,6 +35,32 @@ const FAQItem: React.FC<{ question: string; answer: string }> = ({ question, ans
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
+
+  // Motor da Contagem Regressiva da Copa
+  const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0 });
+
+  useEffect(() => {
+    const targetDate = new Date('2026-05-01T00:00:00').getTime();
+    
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+      const distance = targetDate - now;
+      
+      if (distance < 0) {
+        clearInterval(interval);
+        return;
+      }
+      
+      setTimeLeft({
+        d: Math.floor(distance / (1000 * 60 * 60 * 24)),
+        h: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        m: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+        s: Math.floor((distance % (1000 * 60)) / 1000)
+      });
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const features = [
     { icon: PlusCircle, label: 'Criar Nova Liga', color: 'bg-brazil-blue', path: '/criar-liga' },
@@ -115,6 +141,42 @@ const Home: React.FC = () => {
             </div>
           </div>
         </motion.div>
+
+        {/* Banner Copa do Mundo 2026 */}
+        <div className="mt-4 mb-2 bg-gradient-to-r from-[#8B6B1D] via-[#D4AF37] to-[#8B6B1D] rounded-xl p-4 text-white shadow-lg relative overflow-hidden">
+          <div className="absolute -right-4 -top-4 opacity-20">
+            <Trophy size={100} />
+          </div>
+          <div className="relative z-10 flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <Trophy size={20} className="text-white" />
+              <h3 className="font-black text-sm uppercase tracking-wider">Bolão Copa do Mundo 2026</h3>
+            </div>
+            <p className="text-xs text-white/90 font-medium">As ligas exclusivas da Copa abrem em:</p>
+            
+            <div className="flex gap-2 mt-1">
+              <div className="bg-black/20 rounded-lg px-2 py-1 flex flex-col items-center min-w-[48px]">
+                <span className="font-black text-lg leading-none">{timeLeft.d}</span>
+                <span className="text-[9px] uppercase font-bold text-white/80">Dias</span>
+              </div>
+              <span className="font-black text-lg py-1">:</span>
+              <div className="bg-black/20 rounded-lg px-2 py-1 flex flex-col items-center min-w-[48px]">
+                <span className="font-black text-lg leading-none">{timeLeft.h.toString().padStart(2, '0')}</span>
+                <span className="text-[9px] uppercase font-bold text-white/80">Hrs</span>
+              </div>
+              <span className="font-black text-lg py-1">:</span>
+              <div className="bg-black/20 rounded-lg px-2 py-1 flex flex-col items-center min-w-[48px]">
+                <span className="font-black text-lg leading-none">{timeLeft.m.toString().padStart(2, '0')}</span>
+                <span className="text-[9px] uppercase font-bold text-white/80">Min</span>
+              </div>
+              <span className="font-black text-lg py-1">:</span>
+              <div className="bg-black/20 rounded-lg px-2 py-1 flex flex-col items-center min-w-[48px]">
+                <span className="font-black text-lg leading-none">{timeLeft.s.toString().padStart(2, '0')}</span>
+                <span className="text-[9px] uppercase font-bold text-white/80">Seg</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Grid de Botões */}
         <div className="grid grid-cols-2 gap-3">
@@ -226,7 +288,7 @@ const Home: React.FC = () => {
         {/* Rodapé Seguro (Legal, Privacidade, Selos e Contato Institucional) */}
         <footer className="pt-6 pb-10 text-center space-y-6">
           <div className="flex justify-center gap-4">
-            <a href="https://bolaobrasil.app.br" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-gray-400 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors">
+            <a href="https://transparencyreport.google.com/safe-browsing/search?url=bolaobrasil.app.br" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-gray-400 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors">
               <ShieldCheck size={16} className="text-brazil-green" />
               <span className="text-[10px] font-bold uppercase tracking-wider">Google Safe</span>
             </a>
