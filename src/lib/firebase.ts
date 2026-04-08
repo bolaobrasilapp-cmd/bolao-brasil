@@ -1,20 +1,19 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
-// Suas chaves de conexão (O "RG" do seu banco de dados)
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "COLE_SUA_API_KEY_AQUI",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "bolao-brasil.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "bolao-brasil",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "bolao-brasil.appspot.com",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "COLE_SEU_SENDER_ID",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "COLE_SEU_APP_ID"
+  apiKey: "AIzaSyDjpYHg2t9GM_F_T6Onp0G2njxf3Z28Z2M",
+  authDomain: "bolaobrasil-6af5e.firebaseapp.com",
+  projectId: "bolaobrasil-6af5e",
+  storageBucket: "bolaobrasil-6af5e.firebasestorage.app",
+  messagingSenderId: "382835705405",
+  appId: "1:382835705405:web:9e2ad91d3aed54461b8c54",
+  measurementId: "G-0VZ7PLN7E2"
 };
 
-// Inicializando o Firebase
 const app = initializeApp(firebaseConfig);
-
-// Exportando as ferramentas que vamos usar no resto do App
+export const analytics = getAnalytics(app);
 export const db = getFirestore(app);
 export const auth = getAuth(app);

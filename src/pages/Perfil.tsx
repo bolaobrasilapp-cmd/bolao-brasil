@@ -3,9 +3,13 @@ import { motion } from 'motion/react';
 import { UserCircle2, Key, ShieldCheck, LogOut, Calendar, Fingerprint, AlertCircle } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
+import { db } from '../lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Perfil() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [nome, setNome] = useState('Diego');
   const [dataNascimento, setDataNascimento] = useState('');
   const [cpf, setCpf] = useState('');
@@ -46,7 +50,7 @@ export default function Perfil() {
     return idade >= 18;
   };
 
-  const handleSalvar = () => {
+  const handleSalvar = async () => {
     setErro('');
     
     if (!dataNascimento || !cpf) {
@@ -59,8 +63,25 @@ export default function Perfil() {
       return;
     }
 
-    // Aqui entraria a lógica de salvar no Firebase
-    alert('Dados validados e salvos com sucesso!');
+    try {
+      // Usa o telefone digitado no login como "ID" do usuário. Se não achar, usa 'anonimo'
+      const userId = user?.telefone || 'usuario_anonimo';
+
+      // Dispara os dados para a coleção "usuarios" no Firebase
+      await setDoc(doc(db, "usuarios", userId), {
+        nome: nome,
+        dataNascimento: dataNascimento,
+        cpf: cpf,
+        pixKey: pixKey,
+        telefone: userId,
+        dataCadastro: new Date().toISOString()
+      });
+
+      alert('Dados salvos na nuvem com sucesso! O Admin já pode ver sua Chave Pix.');
+    } catch (error) {
+      console.error("Erro ao salvar no Firebase:", error);
+      setErro('Falha ao conectar com o banco de dados. Verifique sua internet.');
+    }
   };
 
   return (
