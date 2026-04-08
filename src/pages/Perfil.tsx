@@ -10,7 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 export default function Perfil() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [nome, setNome] = useState('Diego');
+  const [nome, setNome] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
   const [cpf, setCpf] = useState('');
   const [pixKey, setPixKey] = useState(() => {
@@ -64,8 +64,13 @@ export default function Perfil() {
     }
 
     try {
-      // Usa o telefone digitado no login como "ID" do usuário. Se não achar, usa 'anonimo'
-      const userId = user?.telefone || 'usuario_anonimo';
+      // Trava de segurança: Impede a sobreposição. O usuário PRECISA estar logado para salvar.
+      if (!user?.telefone) {
+        setErro('Você precisa fazer Login com seu WhatsApp antes de salvar os dados.');
+        return;
+      }
+
+      const userId = user.telefone; // O ID do documento agora será sempre o telefone real
 
       // Dispara os dados para a coleção "usuarios" no Firebase
       await setDoc(doc(db, "usuarios", userId), {
@@ -114,6 +119,20 @@ export default function Perfil() {
             <AlertCircle size={16} /> {erro}
           </motion.div>
         )}
+
+        {/* Input Nome Completo */}
+        <div className="space-y-1.5 mb-2">
+          <label className="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-1">
+            <UserCircle2 size={12} /> Nome Completo
+          </label>
+          <input 
+            type="text" 
+            placeholder="Digite seu nome completo"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-brazil-blue focus:bg-white transition-all font-medium"
+          />
+        </div>
 
         {/* Input Data de Nascimento com Digitação Livre */}
         <div className="space-y-1.5">
