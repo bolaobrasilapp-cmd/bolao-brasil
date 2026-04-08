@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { UserCircle2, Key, ShieldCheck, LogOut, Calendar, Fingerprint, AlertCircle } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
@@ -9,8 +9,15 @@ export default function Perfil() {
   const [nome, setNome] = useState('Diego');
   const [dataNascimento, setDataNascimento] = useState('');
   const [cpf, setCpf] = useState('');
-  const [pixKey, setPixKey] = useState('');
+  const [pixKey, setPixKey] = useState(() => {
+    return localStorage.getItem('@BolaoBrasil:pixKey') || '';
+  });
   const [erro, setErro] = useState('');
+
+  // Rastreador: Salva a chave Pix automaticamente sempre que ela mudar
+  useEffect(() => {
+    localStorage.setItem('@BolaoBrasil:pixKey', pixKey);
+  }, [pixKey]);
 
   // Máscara para Data de Nascimento (DD/MM/AAAA)
   const aplicarMascaraData = (valor: string) => {
