@@ -9,10 +9,25 @@ export default function Perfil() {
   const [cpf, setCpf] = useState('');
   const [erro, setErro] = useState('');
 
+  // Máscara para Data de Nascimento (DD/MM/AAAA)
+  const aplicarMascaraData = (valor: string) => {
+    return valor
+      .replace(/\D/g, '') // Remove tudo que não é número
+      .replace(/(\d{2})(\d)/, '$1/$2') // Coloca a primeira barra
+      .replace(/(\d{2})(\d)/, '$1/$2') // Coloca a segunda barra
+      .replace(/(\/\d{4})\d+?$/, '$1'); // Limita a 10 caracteres
+  };
+
   // Função para validar idade (Mínimo 18 anos)
-  const validarIdade = (data: string) => {
+  const validarIdade = (dataPTBR: string) => {
+    if (dataPTBR.length < 10) return false;
+    
+    // Converte DD/MM/AAAA para AAAA-MM-DD para o Date entender
+    const [dia, mes, ano] = dataPTBR.split('/');
+    const dataISO = `${ano}-${mes}-${dia}`;
+    
     const hoje = new Date();
-    const nascimento = new Date(data);
+    const nascimento = new Date(dataISO);
     let idade = hoje.getFullYear() - nascimento.getFullYear();
     const m = hoje.getMonth() - nascimento.getMonth();
     if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) {
@@ -69,16 +84,18 @@ export default function Perfil() {
           </motion.div>
         )}
 
-        {/* Input Data de Nascimento */}
+        {/* Input Data de Nascimento com Digitação Livre */}
         <div className="space-y-1.5">
           <label className="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-1">
             <Calendar size={12} /> Data de Nascimento
           </label>
           <input 
-            type="date" 
+            type="text" 
+            inputMode="numeric"
+            placeholder="DD/MM/AAAA"
             value={dataNascimento}
-            onChange={(e) => setDataNascimento(e.target.value)}
-            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-brazil-blue focus:bg-white transition-all"
+            onChange={(e) => setDataNascimento(aplicarMascaraData(e.target.value))}
+            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-brazil-blue focus:bg-white transition-all font-medium"
           />
         </div>
 
@@ -91,7 +108,14 @@ export default function Perfil() {
             type="text" 
             placeholder="000.000.000-00"
             value={cpf}
-            onChange={(e) => setCpf(e.target.value)}
+            onChange={(e) => {
+  const v = e.target.value.replace(/\D/g, '')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+    .replace(/(-\d{2})\d+?$/, '$1');
+  setCpf(v);
+}}
             className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-brazil-blue focus:bg-white transition-all font-mono"
           />
         </div>
