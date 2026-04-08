@@ -6,18 +6,17 @@ export const rodadaAtual = {
       id: 1,
       home: "Flamengo",
       away: "Palmeiras",
-      // Agora aponta para a sua pasta public/escudos
-      homeLogo: "/escudos/flamengo.png", 
-      awayLogo: "/escudos/palmeiras.png",
+      homeLogo: "/escudos/Flamengo.png", 
+      awayLogo: "/escudos/Palmeiras.png",
       data: "Hoje",
       hora: "21:30"
     },
     {
       id: 2,
-      home: "Vitoria",
+      home: "Vitória",
       away: "Corinthians",
-      homeLogo: "/escudos/vitoria.png", 
-      awayLogo: "/escudos/corinthians.png",
+      homeLogo: "/escudos/Vitoria.png", 
+      awayLogo: "/escudos/Corinthians.png",
       data: "Dom",
       hora: "16:00"
     },
@@ -25,8 +24,8 @@ export const rodadaAtual = {
       id: 3,
       home: "Grêmio",
       away: "Internacional",
-      homeLogo: "/escudos/gremio.png", 
-      awayLogo: "/escudos/internacional.png",
+      homeLogo: "/escudos/Gremio.png", 
+      awayLogo: "/escudos/Internacional.png",
       data: "Dom",
       hora: "18:30"
     }
