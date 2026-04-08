@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   PlusCircle, Users, Calendar, CheckSquare, BarChart3, QrCode,
   ChevronDown, ChevronUp, Trophy, Share2, Star, ShieldCheck, Lock
@@ -35,6 +36,7 @@ const FAQItem: React.FC<{ question: string; answer: string }> = ({ question, ans
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
+  const { saldo } = useAuth();
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -148,7 +150,13 @@ const Home: React.FC = () => {
             <h2 className="text-xl font-black leading-tight">Pronto para cravar?</h2>
             <div className="pt-2">
               <p className="text-xs opacity-90 font-medium">PONTOS TOTAIS:</p>
-              <p className="text-4xl font-black text-brazil-yellow drop-shadow-md">1,250</p>
+              <p className="text-4xl font-black text-brazil-yellow drop-shadow-md leading-none">1,250</p>
+            </div>
+            <div className="pt-2">
+              <p className="text-[10px] opacity-90 font-bold uppercase tracking-wider">Saldo em Carteira:</p>
+              <p className="text-xl font-black text-white leading-none">
+                {saldo.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}
+              </p>
             </div>
             <div className="flex gap-2 mt-4 relative z-20 max-w-[80%]">
               <button onClick={() => navigate('/palpites')} className="bg-white text-brazil-green px-4 py-2 rounded-full text-xs font-bold shadow-sm w-full">

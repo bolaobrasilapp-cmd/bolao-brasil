@@ -10,19 +10,37 @@ export default function Login() {
   const [telefone, setTelefone] = useState('');
   const [enviado, setEnviado] = useState(false);
 
-  const handleEnviarLink = () => {
-    if (telefone.length < 14) {
-      alert('Digite um número de WhatsApp válido com DDD.');
+  const handleEnviarLink = async () => {
+    // Limpa o número para mandar apenas dígitos para a API
+    const numeroLimpo = telefone.replace(/\D/g, '');
+
+    if (numeroLimpo.length < 11) {
+      alert('Digite o número completo com DDD (ex: 11999998888)');
       return;
     }
     
-    setEnviado(true);
-    
-    // Simula o tempo do usuário ir no WhatsApp, clicar no link e o sistema autenticar
-    setTimeout(() => {
-      login(telefone); // Salva no cérebro
-      navigate('/'); // Manda pra Home
-    }, 2500);
+    try {
+      // Chama a função que criamos na Vercel
+      const response = await fetch('/api/send-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telefone: numeroLimpo }),
+      });
+
+      if (response.ok) {
+        setEnviado(true);
+        // Agora o login real só acontece quando ele clicar no link do Zap
+        // Mas para seu teste de agora, vamos manter o login automático após 5s
+        setTimeout(() => {
+          login(telefone);
+          navigate('/');
+        }, 5000);
+      } else {
+        alert('Erro ao enviar WhatsApp. Verifique suas chaves da Meta.');
+      }
+    } catch (error) {
+      alert('Falha na conexão com o servidor de disparo.');
+    }
   };
 
   return (

@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Trophy, DollarSign, Users, CheckCircle, AlertCircle, Search, Lock, KeyRound } from 'lucide-react';
+import { db } from '../lib/firebase';
+import { collection, doc, writeBatch } from 'firebase/firestore';
+import { LayoutDashboard, Trophy, DollarSign, Users, CheckCircle, AlertCircle, Search, Lock, KeyRound, Sparkles, CalendarDays } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 
 export default function Admin() {
   const [autenticado, setAutenticado] = useState(false);
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
-  const [abaAtiva, setAbaAtiva] = useState<'dashboard' | 'resultados' | 'repasses'>('dashboard');
+  const [abaAtiva, setAbaAtiva] = useState<'dashboard' | 'resultados' | 'repasses' | 'jogos'>('dashboard');
+  const [textoIA, setTextoIA] = useState('');
+  const [rodadaIA, setRodadaIA] = useState('1');
+  const [categoriaIA, setCategoriaIA] = useState<'brasileirao' | 'copa'>('brasileirao');
+  const [loadingIA, setLoadingIA] = useState(false);
 
   const SENHA_MASTER = 'Lara#340@123'; // Você pode mudar essa senha para qual quiser depois!
 
@@ -17,6 +23,51 @@ export default function Admin() {
     } else {
       setErro('Acesso negado. Senha incorreta.');
       setSenha('');
+    }
+  };
+
+  const processarJogosComIA = async () => {
+    if (!textoIA.trim()) return alert("Cole o texto dos jogos primeiro!");
+    
+    setLoadingIA(true);
+    try {
+      const response = await fetch('/api/processar-jogos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          textoBruto: textoIA, 
+          categoria: categoriaIA, 
+          rodada: Number(rodadaIA) 
+        }),
+      });
+
+      const jogosProcessados = await response.json();
+
+      if (!Array.isArray(jogosProcessados)) {
+        throw new Error("A IA não retornou um formato de lista válido.");
+      }
+
+      const batch = writeBatch(db);
+      
+      jogosProcessados.forEach((jogo: any) => {
+        const idUnico = `${jogo.home}_${jogo.away}_R${rodadaIA}`.replace(/\s+/g, '');
+        const docRef = doc(collection(db, "jogos"), idUnico);
+        batch.set(docRef, {
+          ...jogo,
+          categoria: categoriaIA,
+          rodada: Number(rodadaIA),
+          dataCadastro: new Date().toISOString()
+        });
+      });
+
+      await batch.commit();
+      alert(`Sucesso! ${jogosProcessados.length} jogos cadastrados.`);
+      setTextoIA('');
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao processar. Verifique sua GEMINI_API_KEY na Vercel.");
+    } finally {
+      setLoadingIA(false);
     }
   };
 
@@ -91,21 +142,27 @@ export default function Admin() {
       <div className="flex overflow-x-auto bg-gray-800 border-b border-gray-700 p-2 gap-2 hide-scrollbar">
         <button 
           onClick={() => setAbaAtiva('dashboard')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${abaAtiva === 'dashboard' ? 'bg-brazil-blue text-white' : 'text-gray-400 hover:bg-gray-700'}`}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${abaAtiva === 'dashboard' ? 'bg-brazil-blue text-white shadow-sm' : 'text-gray-400 hover:bg-gray-700'}`}
         >
-          <LayoutDashboard size={16} /> Visão Geral
+          <LayoutDashboard size={14} /> Dashboard
         </button>
         <button 
           onClick={() => setAbaAtiva('resultados')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${abaAtiva === 'resultados' ? 'bg-brazil-yellow text-brazil-blue' : 'text-gray-400 hover:bg-gray-700'}`}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${abaAtiva === 'resultados' ? 'bg-brazil-yellow text-brazil-blue shadow-sm' : 'text-gray-400 hover:bg-gray-700'}`}
         >
-          <Trophy size={16} /> Lançar Resultados
+          <Trophy size={14} /> Resultados
         </button>
         <button 
           onClick={() => setAbaAtiva('repasses')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${abaAtiva === 'repasses' ? 'bg-green-600 text-white' : 'text-gray-400 hover:bg-gray-700'}`}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${abaAtiva === 'repasses' ? 'bg-green-600 text-white shadow-sm' : 'text-gray-400 hover:bg-gray-700'}`}
         >
-          <DollarSign size={16} /> Repasses Pendentes
+          <DollarSign size={14} /> Repasses
+        </button>
+        <button 
+          onClick={() => setAbaAtiva('jogos')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${abaAtiva === 'jogos' ? 'bg-purple-600 text-white shadow-md' : 'text-purple-400/70 border border-purple-500/20 hover:bg-gray-700'}`}
+        >
+          <Sparkles size={14} /> IMPORTAR IA
         </button>
       </div>
 
@@ -190,7 +247,6 @@ export default function Admin() {
               <input type="text" placeholder="Buscar usuário ou liga..." className="w-full bg-gray-800 border border-gray-700 rounded-xl py-3 pl-10 pr-4 text-xs text-white focus:outline-none focus:border-brazil-blue" />
             </div>
 
-            {/* Card de Pagamento Pendente */}
             <div className="bg-gray-800 rounded-2xl p-4 border-l-4 border-l-brazil-yellow shadow-lg">
               <div className="flex justify-between items-start mb-3">
                 <div>
@@ -217,6 +273,63 @@ export default function Admin() {
                   <CheckCircle size={14} /> Marcar como Pago
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {abaAtiva === 'jogos' && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+            <div className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-xl flex gap-3 items-start">
+              <Sparkles size={20} className="text-purple-400 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-xs font-bold text-purple-300 uppercase">Motor Gemini 1.5 Ativo</h4>
+                <p className="text-[10px] text-purple-200/70 leading-relaxed mt-1">
+                  Cole o texto bruto de qualquer site (GE, CBF, ESPN). A IA vai identificar times, horários e estádios automaticamente.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-gray-800 rounded-2xl p-5 border border-gray-700 space-y-4 shadow-xl">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Rodada</label>
+                  <input 
+                    type="number" 
+                    value={rodadaIA}
+                    onChange={(e) => setRodadaIA(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-sm outline-none focus:border-purple-500"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Campeonato</label>
+                  <select 
+                    value={categoriaIA}
+                    onChange={(e) => setCategoriaIA(e.target.value as any)}
+                    className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-sm outline-none focus:border-purple-500"
+                  >
+                    <option value="brasileirao">Brasileirão</option>
+                    <option value="copa">Copa do Mundo</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Texto dos Jogos</label>
+                <textarea 
+                  value={textoIA}
+                  onChange={(e) => setTextoIA(e.target.value)}
+                  placeholder="Ex: Sáb 13/04 18:30 Criciúma x Vitória Heriberto Hülse..."
+                  className="w-full h-40 bg-gray-900 border border-gray-700 rounded-xl p-4 text-xs outline-none focus:border-purple-500 font-mono"
+                />
+              </div>
+
+              <button 
+                onClick={processarJogosComIA}
+                disabled={loadingIA}
+                className="w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-black py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 uppercase text-xs tracking-wider"
+              >
+                {loadingIA ? "Processando com IA..." : "Cadastrar Rodada no Calendário"}
+              </button>
             </div>
           </div>
         )}
