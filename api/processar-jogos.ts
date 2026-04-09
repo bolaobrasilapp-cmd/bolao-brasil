@@ -8,49 +8,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'Chave GEMINI_API_KEY não configurada na Vercel.' });
+    return res.status(500).json({ error: 'Falta GEMINI_API_KEY na Vercel.' });
   }
 
-  // Usando o modelo mais estável para evitar o erro 404
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-  const prompt = `Atue como um extrator de dados esportivos. 
-  Converta o texto de jogos abaixo em um ARRAY JSON puro.
-  
-  Formato esperado:
-  [
-    {
-      "home": "Time Casa",
-      "away": "Time Fora",
-      "data": "DD/MM",
-      "hora": "HH:MM",
-      "estadio": "Nome do Estádio",
-      "categoria": "${categoria}",
-      "rodada": ${rodada}
-    }
-  ]
-
-  Regras:
-  - Não use blocos de código markdown (sem aspas ou a palavra json).
-  - Se não houver estádio, use "".
-  - Responda APENAS o array [].
-
-  Texto: ${textoBruto}`;
-
   try {
+    // Inicializa a IA forçando a versão 1.5 Flash que é a mais moderna e estável
+    const genAI = new GoogleGenerativeAI(apiKey);
+    
+    // IMPORTANTE: Mudamos aqui para o modelo 1.5-flash que é o padrão de 2026
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-flash" 
+    });
+
+    const prompt = `Extraia os jogos de futebol do texto abaixo. 
+    Responda APENAS um array JSON puro.
+    Formato: [{"home": "Time A", "away": "Time B", "data": "DD/MM", "hora": "HH:MM", "estadio": "Nome", "categoria": "${categoria}", "rodada": ${rodada}}]
+    
+    Texto: ${textoBruto}`;
+
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
     
-    // Limpeza de segurança para garantir que o JSON seja aceito
+    // Limpeza de caracteres que a IA às vezes coloca e quebram o JSON
     const cleanJson = text.replace(/```json|```/g, "").trim();
     
     return res.status(200).json(JSON.parse(cleanJson));
+
   } catch (error: any) {
-    console.error("Erro na API Gemini:", error);
+    // Se der erro, vamos mostrar exatamente o que o Google respondeu
+    console.error("ERRO GOOGLE:", error);
     return res.status(500).json({ 
-      error: 'Erro ao processar IA', 
+      error: 'Erro na IA', 
       detalhe: error.message 
     });
   }
