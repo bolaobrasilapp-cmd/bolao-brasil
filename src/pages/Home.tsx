@@ -226,7 +226,7 @@ const Home: React.FC = () => {
               </div>
             </div>
             <div className="bg-brazil-yellow text-brazil-blue text-[10px] font-black px-4 py-2 rounded-xl shadow-md uppercase tracking-widest animate-pulse relative z-10">
-              Girar
+            Abrir Agora
             </div>
           </motion.div>
 
