@@ -7,34 +7,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    return res.status(500).json({ error: 'Chave GEMINI_API_KEY não encontrada na Vercel.' });
+    return res.status(500).json({ error: 'Falta a chave GEMINI_API_KEY na Vercel.' });
   }
 
-  // URL Direta da API do Google (v1beta é a que suporta o Flash com JSON)
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  // IMPORTANTE: Adicionado '-latest' para forçar o Google a achar o modelo e evitar o bug do 404
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
 
   const payload = {
     contents: [{
       parts: [{
-        text: `Extraia os jogos de futebol do texto abaixo e retorne APENAS um array JSON puro, sem markdown.
-        Formato de cada objeto:
-        {
-          "home": "Time Casa",
-          "away": "Time Fora",
-          "data": "DD/MM",
-          "hora": "HH:MM",
-          "estadio": "Nome do Estádio",
-          "categoria": "${categoria}",
-          "rodada": ${rodada}
-        }
+        text: `Retorne APENAS um array JSON. Extraia os jogos:
+        Formato: [{"home": "Time A", "away": "Time B", "data": "DD/MM", "hora": "HH:MM", "estadio": "Nome", "categoria": "${categoria}", "rodada": ${rodada}}]
         
         Texto: ${textoBruto}`
       }]
     }],
     generationConfig: {
-      temperature: 0.1,
-      topK: 1,
-      topP: 1,
+      responseMimeType: "application/json" // Força o Google a não usar Markdown
     }
   };
 
@@ -47,25 +36,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const data: any = await response.json();
 
-    // Se o Google responder erro (como o 404), pegamos o detalhe aqui
-    if (data.error) {
-      return res.status(data.error.code || 500).json({ 
-        error: 'Erro no Google AI', 
-        detalhe: data.error.message 
+    // Se o Google recusar, passamos o erro real pra frente
+    if (!response.ok) {
+      return res.status(response.status).json({ 
+        error: `Erro Google (${response.status})`, 
+        detalhe: data.error?.message || 'Modelo não encontrado ou sem permissão.' 
       });
     }
 
-    // Extrai o texto da resposta da IA
     const aiText = data.candidates[0].content.parts[0].text;
+    
+    // Proteção extra
     const cleanJson = aiText.replace(/```json|```/g, "").trim();
     
     return res.status(200).json(JSON.parse(cleanJson));
 
   } catch (error: any) {
-    console.error("Erro Interno:", error);
-    return res.status(500).json({ 
-      error: 'Erro no processamento', 
-      detalhe: error.message 
-    });
+    return res.status(500).json({ error: 'Falha no servidor', detalhe: error.message });
   }
 }

@@ -41,26 +41,28 @@ export default function Admin() {
         }),
       });
 
-      // Se der erro 404 (Not Found) ou 500, ele vai te avisar aqui antes de travar
-      if (!response.ok) {
-        throw new Error(`A API não respondeu (Erro ${response.status}). Se estiver no PC local, use o comando 'vercel dev'.`);
+      let data;
+      try {
+        data = await response.json();
+      } catch (err) {
+        throw new Error(`Servidor da Vercel falhou (Erro ${response.status}). O deploy não concluiu ou a rota sumiu.`);
       }
 
-      const data = await response.json();
+      // Se a IA negou, joga o erro REAL na tela
+      if (!response.ok || data.error) {
+        throw new Error(`Google IA recusou: ${data.detalhe || data.error || 'Erro Desconhecido'}`);
+      }
 
-      // Se a IA falhou em entender o texto, o 'data.jogos' virá vazio ou erro
       const listaDeJogos = data.jogos || data; 
 
       if (!Array.isArray(listaDeJogos) || listaDeJogos.length === 0) {
-        throw new Error("A IA não conseguiu identificar os jogos. Tente copiar um texto mais limpo (ex: do site do GE).");
+        throw new Error("A IA devolveu vazio. Tente colar um texto mais limpo.");
       }
 
       const batch = writeBatch(db);
       
       listaDeJogos.forEach((jogo: any) => {
-        // Validação extra: se o time estiver vazio, pula
         if (!jogo.home || !jogo.away) return;
-
         const idUnico = `${jogo.home}_${jogo.away}_R${rodadaIA}`.replace(/[^a-zA-Z0-9]/g, '');
         const docRef = doc(collection(db, "jogos"), idUnico);
         batch.set(docRef, {
@@ -76,11 +78,11 @@ export default function Admin() {
       });
 
       await batch.commit();
-      alert(`Mágica feita! ${listaDeJogos.length} jogos cadastrados.`);
+      alert(`Mágica feita! ${listaDeJogos.length} jogos cadastrados na rodada ${rodadaIA}.`);
       setTextoIA('');
     } catch (error: any) {
       console.error(error);
-      alert(error.message);
+      alert(error.message); // Aqui ele mostra o erro exato do Google
     } finally {
       setLoadingIA(false);
     }
