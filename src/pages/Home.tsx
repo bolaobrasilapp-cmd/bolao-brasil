@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   PlusCircle, Users, Calendar, CheckSquare, BarChart3, QrCode,
-  ChevronDown, ChevronUp, Trophy, Share2, Star, ShieldCheck, Lock
+  ChevronDown, ChevronUp, Trophy, Share2, Star, ShieldCheck, Lock, Gift
 } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { generateWebApplicationSchema, generateFAQSchema } from '../utils/schema';
@@ -104,12 +104,6 @@ const Home: React.FC = () => {
     { id: 6, nome: "Copa Macanudo Rex", premio: "R$ 600,00", icon: Trophy, color: "text-red-500" }
   ];
 
-  const reviews = [
-    { name: "Carlos T.", role: "Organizador da Firma", text: "Acabou a dor de cabeça de cobrar o pessoal no WhatsApp. O app tranca o palpite até o Pix cair. Genial!", rating: 5 },
-    { name: "Mariana S.", role: "Torcedora", text: "Ganhei o bolão da rodada e o dinheiro caiu na minha conta na segunda de manhã sem eu pedir. Muito confiável.", rating: 5 },
-    { name: "João P.", role: "Grupo de Amigos", text: "O ranking ao vivo enquanto o jogo acontece deixa a resenha no bar 10x mais emocionante.", rating: 5 }
-  ];
-
   return (
     <>
       <SEO 
@@ -118,7 +112,6 @@ const Home: React.FC = () => {
         canonical="https://bolaobrasil.app/"
         schema={[generateWebApplicationSchema(), generateFAQSchema()]}
       />
-      {/* Schema.org Aggregate Rating para estrelas no Google */}
       <Helmet>
         <script type="application/ld+json">
           {`
@@ -155,7 +148,7 @@ const Home: React.FC = () => {
             <div className="pt-2">
               <p className="text-[10px] opacity-90 font-bold uppercase tracking-wider">Saldo em Carteira:</p>
               <p className="text-xl font-black text-white leading-none">
-                {saldo.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}
+                {saldo ? saldo.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00'}
               </p>
             </div>
             <div className="flex gap-2 mt-4 relative z-20 max-w-[80%]">
@@ -212,6 +205,26 @@ const Home: React.FC = () => {
           ))}
         </div>
 
+        {/* --- BANNER INDIQUE E GANHE NA HOME --- */}
+        <motion.div 
+          whileTap={{ scale: 0.98 }}
+          onClick={() => navigate('/indique')} 
+          className="bg-gradient-to-r from-brazil-yellow to-[#FFD700] rounded-xl p-4 shadow-sm border border-yellow-300 flex items-center justify-between cursor-pointer"
+        >
+          <div className="flex items-center gap-3">
+            <div className="bg-white/30 p-2 rounded-xl">
+              <Gift size={24} className="text-brazil-blue" />
+            </div>
+            <div>
+              <h3 className="font-black text-brazil-blue text-sm uppercase tracking-tight">Indique e Ganhe R$2,00</h3>
+              <p className="text-[10px] text-brazil-blue/80 font-bold uppercase tracking-wider">Convide amigos para o bolão</p>
+            </div>
+          </div>
+          <div className="bg-white text-brazil-blue text-[10px] font-black px-3 py-2 rounded-xl shadow-sm uppercase tracking-widest flex items-center gap-1">
+            Resgatar
+          </div>
+        </motion.div>
+
         {/* Destaques da Rodada (Ligas Reais Integradas) */}
         <div className="space-y-3">
           <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest px-1">Destaques da Rodada</h3>
@@ -229,7 +242,8 @@ const Home: React.FC = () => {
             ))}
           </div>
         </div>
-{/* FAQ Estruturado para SEO e AEO (Inteligência Artificial) */}
+
+        {/* FAQ Estruturado para SEO e AEO (Inteligência Artificial) */}
         <div className="space-y-4 pt-4">
           <div className="px-1">
             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest">Dúvidas Frequentes</h3>
@@ -267,8 +281,8 @@ const Home: React.FC = () => {
             ))}
           </div>
         </div>
-        {/* Social Proof: Avaliações de Clientes ... (MANTENHA O BLOCO DE AVALIAÇÕES E FAQ INTACTOS AQUI NO MEIO) ... */}
-{/* Avaliações da Loja - Estilo Velo Delivery */}
+
+        {/* Avaliações */}
         <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm mt-6 mb-4">
           <div className="flex flex-col items-center text-center space-y-2 mb-6">
             <h3 className="font-black text-xl italic text-[#1A237E] uppercase tracking-tight">AVALIAÇÕES DA LOJA</h3>
@@ -324,7 +338,8 @@ const Home: React.FC = () => {
             DEIXAR UMA AVALIAÇÃO
           </button>
         </div>
-        {/* Rodapé Seguro (Legal, Privacidade, Selos e Contato Institucional) */}
+
+        {/* Rodapé */}
         <footer className="pt-6 pb-10 text-center space-y-6">
           <div className="flex justify-center gap-4">
             <a href="https://transparencyreport.google.com/safe-browsing/search?url=bolaobrasil.app.br" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-gray-400 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors">

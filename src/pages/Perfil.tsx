@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { UserCircle2, Key, ShieldCheck, LogOut, Calendar, Fingerprint, AlertCircle } from 'lucide-react';
+import { UserCircle2, Key, ShieldCheck, LogOut, Calendar, Fingerprint, AlertCircle, Gift } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../lib/firebase';
@@ -10,7 +10,9 @@ import { useAuth } from '../contexts/AuthContext';
 export default function Perfil() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [nome, setNome] = useState('');
+  
+  // Como usamos Google Login, se tiver nome na conta, puxamos ele
+  const [nome, setNome] = useState(user?.nome || '');
   const [dataNascimento, setDataNascimento] = useState('');
   const [cpf, setCpf] = useState('');
   const [pixKey, setPixKey] = useState(() => {
@@ -18,28 +20,22 @@ export default function Perfil() {
   });
   const [erro, setErro] = useState('');
 
-  // Rastreador: Salva a chave Pix automaticamente sempre que ela mudar
   useEffect(() => {
     localStorage.setItem('@BolaoBrasil:pixKey', pixKey);
   }, [pixKey]);
 
-  // Máscara para Data de Nascimento (DD/MM/AAAA)
   const aplicarMascaraData = (valor: string) => {
     return valor
-      .replace(/\D/g, '') // Remove tudo que não é número
-      .replace(/(\d{2})(\d)/, '$1/$2') // Coloca a primeira barra
-      .replace(/(\d{2})(\d)/, '$1/$2') // Coloca a segunda barra
-      .replace(/(\/\d{4})\d+?$/, '$1'); // Limita a 10 caracteres
+      .replace(/\D/g, '')
+      .replace(/(\d{2})(\d)/, '$1/$2')
+      .replace(/(\d{2})(\d)/, '$1/$2')
+      .replace(/(\/\d{4})\d+?$/, '$1');
   };
 
-  // Função para validar idade (Mínimo 18 anos)
   const validarIdade = (dataPTBR: string) => {
     if (dataPTBR.length < 10) return false;
-    
-    // Converte DD/MM/AAAA para AAAA-MM-DD para o Date entender
     const [dia, mes, ano] = dataPTBR.split('/');
     const dataISO = `${ano}-${mes}-${dia}`;
-    
     const hoje = new Date();
     const nascimento = new Date(dataISO);
     let idade = hoje.getFullYear() - nascimento.getFullYear();
@@ -53,7 +49,7 @@ export default function Perfil() {
   const handleSalvar = async () => {
     setErro('');
     
-    if (!dataNascimento || !cpf) {
+    if (!dataNascimento || !cpf || !nome) {
       setErro('Por favor, preencha todos os campos obrigatórios.');
       return;
     }
@@ -64,23 +60,21 @@ export default function Perfil() {
     }
 
     try {
-      // Trava de segurança: Impede a sobreposição. O usuário PRECISA estar logado para salvar.
-      if (!user?.telefone) {
-        setErro('Você precisa fazer Login com seu WhatsApp antes de salvar os dados.');
+      // Correção: Como agora usamos Google, o ID oficial no banco é o UID do Firebase
+      if (!user?.uid) {
+        setErro('Você precisa fazer Login antes de salvar os dados.');
         return;
       }
 
-      const userId = user.telefone; // O ID do documento agora será sempre o telefone real
-
-      // Dispara os dados para a coleção "usuarios" no Firebase
-      await setDoc(doc(db, "usuarios", userId), {
+      await setDoc(doc(db, "usuarios", user.uid), {
         nome: nome,
         dataNascimento: dataNascimento,
         cpf: cpf,
         pixKey: pixKey,
-        telefone: userId,
+        uid: user.uid,
+        email: user.email,
         dataCadastro: new Date().toISOString()
-      });
+      }, { merge: true }); // Merge true evita apagar o saldo/pontos que já existem
 
       alert('Dados salvos na nuvem com sucesso! O Admin já pode ver sua Chave Pix.');
     } catch (error) {
@@ -96,15 +90,20 @@ export default function Perfil() {
       </Helmet>
 
       {/* Header do Perfil */}
-      <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col items-center text-center">
-        <div className="w-20 h-20 bg-brazil-blue/10 rounded-full flex items-center justify-center mb-3 relative">
-          <UserCircle2 size={48} className="text-brazil-blue" />
-          <div className="absolute bottom-0 right-0 bg-brazil-green text-white p-1 rounded-full border-2 border-white">
-            <ShieldCheck size={14} />
+      <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col items-center text-center relative overflow-hidden">
+        {/* Mostra a foto do Google se houver, ou o ícone padrão */}
+        {user?.foto ? (
+          <img src={user.foto} alt="Perfil" className="w-20 h-20 rounded-full mb-3 border-4 border-brazil-green/20" />
+        ) : (
+          <div className="w-20 h-20 bg-brazil-blue/10 rounded-full flex items-center justify-center mb-3 relative">
+            <UserCircle2 size={48} className="text-brazil-blue" />
+            <div className="absolute bottom-0 right-0 bg-brazil-green text-white p-1 rounded-full border-2 border-white">
+              <ShieldCheck size={14} />
+            </div>
           </div>
-        </div>
-        <h2 className="text-xl font-black text-gray-800">{nome}</h2>
-        <p className="text-sm text-gray-500">Cadastro de Torcedor</p>
+        )}
+        <h2 className="text-xl font-black text-gray-800">{nome || "Torcedor"}</h2>
+        <p className="text-sm text-gray-500">{user?.email || "Cadastro Pendente"}</p>
       </div>
 
       {/* Formulário de Dados Obrigatórios (Compliance) */}
@@ -120,7 +119,6 @@ export default function Perfil() {
           </motion.div>
         )}
 
-        {/* Input Nome Completo */}
         <div className="space-y-1.5 mb-2">
           <label className="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-1">
             <UserCircle2 size={12} /> Nome Completo
@@ -134,7 +132,6 @@ export default function Perfil() {
           />
         </div>
 
-        {/* Input Data de Nascimento com Digitação Livre */}
         <div className="space-y-1.5">
           <label className="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-1">
             <Calendar size={12} /> Data de Nascimento
@@ -149,31 +146,29 @@ export default function Perfil() {
           />
         </div>
 
-        {/* Input CPF */}
         <div className="space-y-1.5">
           <label className="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-1">
-            <Fingerprint size={12} /> CPF (Necessário para pagamentos Efí)
+            <Fingerprint size={12} /> CPF (Para pagamentos Efí)
           </label>
           <input 
             type="text" 
             placeholder="000.000.000-00"
             value={cpf}
             onChange={(e) => {
-  const v = e.target.value.replace(/\D/g, '')
-    .replace(/(\d{3})(\d)/, '$1.$2')
-    .replace(/(\d{3})(\d)/, '$1.$2')
-    .replace(/(\d{3})(\d{1,2})/, '$1-$2')
-    .replace(/(-\d{2})\d+?$/, '$1');
-  setCpf(v);
-}}
+              const v = e.target.value.replace(/\D/g, '')
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+                .replace(/(-\d{2})\d+?$/, '$1');
+              setCpf(v);
+            }}
             className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-brazil-blue focus:bg-white transition-all font-mono"
           />
         </div>
 
-        {/* Chave Pix */}
         <div className="space-y-1.5">
           <label className="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-1">
-            <Key size={12} /> Chave Pix para Receber Prêmios
+            <Key size={12} /> Chave Pix para Receber
           </label>
           <input 
             type="text" 
@@ -188,8 +183,25 @@ export default function Perfil() {
           onClick={handleSalvar}
           className="w-full bg-brazil-blue text-white font-black text-xs py-4 rounded-xl shadow-md hover:bg-blue-900 transition-colors mt-2"
         >
-          SALVAR E VERIFICAR CONTA
+          SALVAR DADOS NO SISTEMA
         </button>
+      </div>
+
+      {/* --- BANNER INDIQUE E GANHE NO PERFIL --- */}
+      <div 
+        onClick={() => navigate('/indique')}
+        className="bg-brazil-yellow/20 rounded-2xl p-4 border-2 border-dashed border-brazil-yellow flex items-center justify-between cursor-pointer hover:bg-brazil-yellow/30 transition-colors shadow-sm"
+      >
+        <div className="flex items-center gap-3">
+          <Gift size={28} className="text-brazil-yellow" />
+          <div>
+            <h3 className="font-black text-brazil-blue text-sm leading-none uppercase tracking-wide">Indique e Ganhe</h3>
+            <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-widest">Ganhe créditos por convite</p>
+          </div>
+        </div>
+        <span className="bg-brazil-yellow text-brazil-blue text-[10px] font-black px-4 py-2.5 rounded-xl uppercase shadow-sm tracking-widest">
+          Meu Código
+        </span>
       </div>
 
       {/* Menu Secundário */}
@@ -203,16 +215,15 @@ export default function Perfil() {
         </button>
         
         <button 
-          onClick={() => alert('Redirecionando para o WhatsApp de Suporte...')}
+          onClick={() => window.open('https://wa.me/5544999999999', '_blank')}
           className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors border-b border-gray-50"
         >
           <div className="text-brazil-blue"><AlertCircle size={18} /></div>
-          <span className="text-sm font-bold text-gray-700">Central de Ajuda</span>
+          <span className="text-sm font-bold text-gray-700">Central de Ajuda (WhatsApp)</span>
         </button>
 
         <button 
           onClick={() => {
-            // Lógica de Sair (Limpa o cache e volta pro Login)
             localStorage.clear();
             navigate('/login');
           }}

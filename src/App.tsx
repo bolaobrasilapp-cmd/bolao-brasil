@@ -16,6 +16,7 @@ const Perfil = lazy(() => import('./pages/Perfil'));
 const Legal = lazy(() => import('./pages/Legal'));
 const Calendario = lazy(() => import('./pages/Calendario'));
 const Admin = lazy(() => import('./pages/Admin'));
+const Indique = lazy(() => import('./pages/Indique')); // <-- NOSSA PÁGINA NOVA AQUI
 
 const Placeholder = ({ title }: { title: string }) => (
   <div className="p-8 text-center space-y-4 mt-10">
@@ -46,6 +47,7 @@ export default function App() {
                 <Route path="pix" element={<Pix />} />
                 <Route path="perfil" element={<Perfil />} />
                 <Route path="admin" element={<Admin />} />
+                <Route path="indique" element={<Indique />} /> {/* <-- NOSSA ROTA NOVA AQUI */}
                 <Route path="legal/:pagina" element={<Legal />} />
               </Route>
             </Routes>

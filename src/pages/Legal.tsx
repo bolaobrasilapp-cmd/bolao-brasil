@@ -23,7 +23,7 @@ export default function Legal() {
     },
     'contato': {
       titulo: 'Fale Conosco',
-      texto: 'Precisa de ajuda com sua liga, pagamentos Pix ou tem alguma dúvida técnica? Nossa equipe de suporte está pronta para atender. Entre em contato através do email: suporte@bolaobrasil.app.br. Nosso prazo de resposta padrão é de até 24 horas úteis. Em dias de jogos da rodada, o suporte pode ter um acréscimo no tempo de resposta devido à alta demanda.'
+      texto: 'Precisa de ajuda com sua liga, pagamentos Pix ou tem alguma dúvida técnica? Nossa equipe de suporte está pronta para atender. Entre em contato através do email bolaobrasilapp@gmail.com Nosso prazo de resposta padrão é de até 24 horas úteis. Em dias de jogos da rodada, o suporte pode ter um acréscimo no tempo de resposta devido à alta demanda.'
     },
     'jogo-responsavel': {
       titulo: 'Jogo Responsável',
