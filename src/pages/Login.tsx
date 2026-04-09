@@ -2,39 +2,64 @@ import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../lib/firebase';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 export default function Login() {
   const navigate = useNavigate();
 
+  // Função centralizada para salvar o usuário (Funciona para PC e Celular)
+  const saveUserToFirestore = async (user: any) => {
+    const userRef = doc(db, "usuarios", user.uid); // Corrigido para 'usuarios' para bater com o resto do app
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      await setDoc(userRef, {
+        nome: user.displayName,
+        email: user.email,
+        foto: user.photoURL,
+        pontos: 0,
+        saldo: 0,
+        uid: user.uid,
+        dataCadastro: new Date().toISOString()
+      });
+    }
+    navigate('/');
+  };
+
+  // Efeito para capturar o login quando o celular volta do redirecionamento do Google
+  React.useEffect(() => {
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          saveUserToFirestore(result.user);
+        }
+      })
+      .catch((error) => {
+        console.error("Erro ao processar redirecionamento:", error);
+      });
+  }, []);
+
   const handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider();
+    
+    // Detecta se é um dispositivo móvel
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
     try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      // Cria o perfil do usuário no banco se for o primeiro acesso dele
-      const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
-
-      if (!userSnap.exists()) {
-        await setDoc(userRef, {
-          nome: user.displayName,
-          email: user.email,
-          foto: user.photoURL,
-          pontos: 0,
-          saldo: 0,
-          uid: user.uid,
-          dataCadastro: new Date().toISOString()
-        });
+      if (isMobile) {
+        // No celular: Redireciona a própria aba (À prova de bloqueios)
+        await signInWithRedirect(auth, provider);
+      } else {
+        // No PC: Abre o pop-up (Experiência mais rápida)
+        const result = await signInWithPopup(auth, provider);
+        if (result.user) {
+          await saveUserToFirestore(result.user);
+        }
       }
-      
-      // Manda o usuário logado para a Home
-      navigate('/');
     } catch (error) {
       console.error("Erro ao logar:", error);
-      alert("Falha na autenticação com Google.");
+      alert("Falha na autenticação. Verifique sua conexão ou se o domínio está autorizado no Firebase.");
     }
   };
 

@@ -26,10 +26,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // 2. Monitor de Saldo em Tempo Real (Agora ligado ao UID do Google)
   useEffect(() => {
     if (user?.uid) {
-      // Puxa o saldo da ficha do usuário direto do Firebase
-      const unsub = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+      // Puxa o saldo da ficha do usuário direto do Firebase (Pasta 'usuarios')
+      const unsub = onSnapshot(doc(db, "usuarios", user.uid), (docSnap) => {
         if (docSnap.exists()) {
-          setSaldo(docSnap.data().saldo || 0);
+          const dados = docSnap.data();
+          setSaldo(dados.saldo || 0);
         }
       });
       return () => unsub();
