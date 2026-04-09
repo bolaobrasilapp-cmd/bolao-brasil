@@ -46,20 +46,29 @@ export default function Admin() {
         throw new Error(`A API não respondeu (Erro ${response.status}). Se estiver no PC local, use o comando 'vercel dev'.`);
       }
 
-      const jogosProcessados = await response.json();
+      const data = await response.json();
 
-      if (!Array.isArray(jogosProcessados)) {
-        throw new Error("A IA não retornou uma lista de jogos. Tente copiar o texto novamente.");
+      // Se a IA falhou em entender o texto, o 'data.jogos' virá vazio ou erro
+      const listaDeJogos = data.jogos || data; 
+
+      if (!Array.isArray(listaDeJogos) || listaDeJogos.length === 0) {
+        throw new Error("A IA não conseguiu identificar os jogos. Tente copiar um texto mais limpo (ex: do site do GE).");
       }
 
       const batch = writeBatch(db);
       
-      jogosProcessados.forEach((jogo: any) => {
-        // Gera um ID limpo para o banco de dados
+      listaDeJogos.forEach((jogo: any) => {
+        // Validação extra: se o time estiver vazio, pula
+        if (!jogo.home || !jogo.away) return;
+
         const idUnico = `${jogo.home}_${jogo.away}_R${rodadaIA}`.replace(/[^a-zA-Z0-9]/g, '');
         const docRef = doc(collection(db, "jogos"), idUnico);
         batch.set(docRef, {
-          ...jogo,
+          home: jogo.home,
+          away: jogo.away,
+          data: jogo.data || "",
+          hora: jogo.hora || "",
+          estadio: jogo.estadio || "",
           categoria: categoriaIA,
           rodada: Number(rodadaIA),
           dataCadastro: new Date().toISOString()
@@ -67,7 +76,7 @@ export default function Admin() {
       });
 
       await batch.commit();
-      alert(`Mágica feita! ${jogosProcessados.length} jogos cadastrados no calendário.`);
+      alert(`Mágica feita! ${listaDeJogos.length} jogos cadastrados.`);
       setTextoIA('');
     } catch (error: any) {
       console.error(error);
