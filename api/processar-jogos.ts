@@ -6,43 +6,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { textoBruto, categoria, rodada } = req.body;
   
-  // 1. Verificação de segurança da Chave
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'Chave GEMINI_API_KEY não encontrada no ambiente Vercel.' });
+    return res.status(500).json({ error: 'Chave GEMINI_API_KEY não configurada na Vercel.' });
   }
 
+  // Usando o modelo mais estável para evitar o erro 404
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { apiVersion: 'v1' });
+  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-  const prompt = `Extraia os jogos de futebol do texto abaixo e retorne APENAS um array JSON puro, sem formatação markdown.
-  Siga rigorosamente este formato para cada objeto:
-  {
-    "home": "Time Casa",
-    "away": "Time Fora",
-    "data": "DD/MM",
-    "hora": "HH:MM",
-    "estadio": "Nome do Estádio",
-    "categoria": "${categoria}",
-    "rodada": ${rodada}
-  }
+  const prompt = `Atue como um extrator de dados esportivos. 
+  Converta o texto de jogos abaixo em um ARRAY JSON puro.
+  
+  Formato esperado:
+  [
+    {
+      "home": "Time Casa",
+      "away": "Time Fora",
+      "data": "DD/MM",
+      "hora": "HH:MM",
+      "estadio": "Nome do Estádio",
+      "categoria": "${categoria}",
+      "rodada": ${rodada}
+    }
+  ]
+
+  Regras:
+  - Não use blocos de código markdown (sem aspas ou a palavra json).
+  - Se não houver estádio, use "".
+  - Responda APENAS o array [].
 
   Texto: ${textoBruto}`;
 
   try {
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    let text = response.text();
+    const text = response.text();
     
-    // 2. Limpeza profunda: Remove marcações de markdown e espaços extras que quebram o JSON
-    const cleanJson = text
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
-
-    const parsedData = JSON.parse(cleanJson);
-    return res.status(200).json(parsedData);
-
+    // Limpeza de segurança para garantir que o JSON seja aceito
+    const cleanJson = text.replace(/```json|```/g, "").trim();
+    
+    return res.status(200).json(JSON.parse(cleanJson));
   } catch (error: any) {
     console.error("Erro na API Gemini:", error);
     return res.status(500).json({ 
