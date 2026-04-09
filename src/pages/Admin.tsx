@@ -41,16 +41,22 @@ export default function Admin() {
         }),
       });
 
+      // Se der erro 404 (Not Found) ou 500, ele vai te avisar aqui antes de travar
+      if (!response.ok) {
+        throw new Error(`A API não respondeu (Erro ${response.status}). Se estiver no PC local, use o comando 'vercel dev'.`);
+      }
+
       const jogosProcessados = await response.json();
 
       if (!Array.isArray(jogosProcessados)) {
-        throw new Error("A IA não retornou um formato de lista válido.");
+        throw new Error("A IA não retornou uma lista de jogos. Tente copiar o texto novamente.");
       }
 
       const batch = writeBatch(db);
       
       jogosProcessados.forEach((jogo: any) => {
-        const idUnico = `${jogo.home}_${jogo.away}_R${rodadaIA}`.replace(/\s+/g, '');
+        // Gera um ID limpo para o banco de dados
+        const idUnico = `${jogo.home}_${jogo.away}_R${rodadaIA}`.replace(/[^a-zA-Z0-9]/g, '');
         const docRef = doc(collection(db, "jogos"), idUnico);
         batch.set(docRef, {
           ...jogo,
@@ -61,11 +67,11 @@ export default function Admin() {
       });
 
       await batch.commit();
-      alert(`Sucesso! ${jogosProcessados.length} jogos cadastrados.`);
+      alert(`Mágica feita! ${jogosProcessados.length} jogos cadastrados no calendário.`);
       setTextoIA('');
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Erro ao processar. Verifique sua GEMINI_API_KEY na Vercel.");
+      alert(error.message);
     } finally {
       setLoadingIA(false);
     }
