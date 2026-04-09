@@ -1,189 +1,211 @@
-import React, { useState } from 'react';
-import { motion } from 'motion/react';
-import { ShieldAlert, CheckCircle2, Star, Copy, Loader2, QrCode } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { rodadaAtual } from '../data/rodada';
+import { useNavigate } from 'react-router-dom';
+import { db, auth } from '../lib/firebase';
+import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
+import { Trophy, ArrowLeft, ShieldCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
+
+interface Jogo {
+  id: string;
+  home: string;
+  away: string;
+  data?: string;
+  hora?: string;
+  estadio?: string;
+}
 
 export default function Palpites() {
-  // Máquina de estados para controlar o fluxo da tela
-  const [step, setStep] = useState<'palpites' | 'gerando_pix' | 'checkout'>('palpites');
-  const [pixCopiaECola, setPixCopiaECola] = useState('');
-  const [copiado, setCopiado] = useState(false);
+  const navigate = useNavigate();
+  const [jogos, setJogos] = useState<Jogo[]>([]);
+  const [palpites, setPalpites] = useState<Record<string, { home: string; away: string }>>({});
+  const [loading, setLoading] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+  const [sucesso, setSucesso] = useState(false);
 
-  const matches = [
-    { id: 1, home: 'Flamengo', homeImg: '🔴⚫', away: 'Palmeiras', awayImg: '🟢⚪', time: 'Hoje, 21:30' },
-    { id: 2, home: 'São Paulo', homeImg: '🔴⚪', away: 'Corinthians', awayImg: '⚫⚪', time: 'Dom, 16:00' },
-    { id: 3, home: 'Atlético-MG', homeImg: '⚫⚪', away: 'Cruzeiro', awayImg: '🔵⚪', time: 'Dom, 18:30' },
-  ];
-
-  // Simula a comunicação com a Efí e o Firebase
-  const handleSaveAndPay = async () => {
-    setStep('gerando_pix');
-    
-    try {
-      const response = await fetch('/api/gerar-pix', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          valor: 20.00,
-          cpf: '00000000000', // Aqui você pode puxar do seu estado de Perfil depois
-          nome: 'Jogador Teste',
-          descricao: 'Entrada Bolão Brasil - Rodada #12'
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.sucesso) {
-        setPixCopiaECola(data.copiaECola);
-        setStep('checkout');
-      } else {
-        alert('Erro ao gerar Pix: ' + data.detalhe);
-        setStep('palpites');
+  // Busca os jogos que a IA cadastrou no banco de dados
+  useEffect(() => {
+    const fetchJogos = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "jogos"));
+        const listaJogos: Jogo[] = [];
+        querySnapshot.forEach((doc) => {
+          listaJogos.push({ id: doc.id, ...doc.data() } as Jogo);
+        });
+        setJogos(listaJogos);
+      } catch (error) {
+        console.error("Erro ao buscar jogos:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      alert('Falha na conexão com o banco.');
-      setStep('palpites');
+    };
+    fetchJogos();
+  }, []);
+
+  const handleScoreChange = (jogoId: string, team: 'home' | 'away', value: string) => {
+    // Permite apenas números (0-9) e máximo de 2 dígitos
+    const numericValue = value.replace(/\D/g, '').slice(0, 2);
+    setPalpites(prev => ({
+      ...prev,
+      [jogoId]: {
+        ...prev[jogoId] || { home: '', away: '' },
+        [team]: numericValue
+      }
+    }));
+  };
+
+  const handleSalvarPalpites = async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      alert("Você precisa estar logado para salvar palpites!");
+      navigate('/login');
+      return;
+    }
+
+    // Verifica se preencheu todos os jogos disponíveis
+    if (Object.keys(palpites).length < jogos.length || jogos.length === 0) {
+      alert("Preencha o placar de todos os jogos antes de salvar!");
+      return;
+    }
+
+    setSalvando(true);
+    try {
+      // Salva os palpites na subcoleção do usuário
+      for (const jogoId of Object.keys(palpites)) {
+        const palpiteRef = doc(db, `usuarios/${user.uid}/palpites`, jogoId);
+        await setDoc(palpiteRef, {
+          jogoId,
+          homeScore: Number(palpites[jogoId].home),
+          awayScore: Number(palpites[jogoId].away),
+          dataPalpite: new Date().toISOString()
+        });
+      }
+      setSucesso(true);
+    } catch (error) {
+      console.error("Erro ao salvar palpites:", error);
+      alert("Erro ao salvar. Verifique sua conexão.");
+    } finally {
+      setSalvando(false);
     }
   };
 
-  const handleCopyPix = () => {
-    navigator.clipboard.writeText(pixCopiaECola);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 2000);
-  };
-
-  return (
-    <div className="p-4 space-y-6 pb-20 bg-gray-50 min-h-screen">
-      <Helmet>
-        <title>Meus Palpites | Rodada Brasileirão - Bolão Brasil</title>
-      </Helmet>
-
-      {/* Fluxo 1: Tela de Palpites */}
-      {step === 'palpites' && (
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex justify-between items-center">
-            <div>
-              <h2 className="text-xl font-black text-brazil-blue">Rodada #12</h2>
-              <p className="text-sm text-gray-500">Brasileirão Série A</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] font-bold uppercase text-brazil-green">Entrada</p>
-              <p className="text-sm font-black text-brazil-green">R$ 20,00</p>
-            </div>
+  if (sucesso) {
+    return (
+      <div className="p-4 space-y-6 max-w-md mx-auto pb-24 min-h-screen flex flex-col justify-center items-center">
+        <Helmet><title>Palpites Salvos | Bolão Brasil</title></Helmet>
+        <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-xl w-full text-center space-y-6 animate-in zoom-in duration-500">
+          <div className="w-20 h-20 bg-brazil-green/10 rounded-full flex items-center justify-center mx-auto">
+            <CheckCircle2 size={40} className="text-brazil-green" />
           </div>
-
-          <div className="space-y-4">
-            {rodadaAtual.jogos.map((match) => (
-              <div key={match.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm relative overflow-hidden">
-                <div className="text-center mb-3">
-                  <span className="bg-gray-100 text-gray-500 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
-                    {match.data}, {match.hora}
-                  </span>
-                </div>
-                
-                <div className="flex items-center justify-between gap-2">
-                  {/* Time Casa */}
-                  <div className="flex flex-col items-center flex-1">
-                    <img src={match.homeLogo} alt={match.home} className="w-10 h-10 object-contain mb-1" />
-                    <span className="text-[11px] font-bold text-gray-800 truncate w-full text-center">{match.home}</span>
-                  </div>
-                  
-                  {/* Inputs Placar */}
-                  <div className="flex items-center gap-2">
-                    <input type="number" className="w-11 h-11 bg-gray-50 border-2 border-gray-200 rounded-xl text-center text-xl font-black text-brazil-blue focus:border-brazil-green focus:ring-0 outline-none transition-colors" placeholder="-" />
-                    <span className="text-gray-400 font-bold">X</span>
-                    <input type="number" className="w-11 h-11 bg-gray-50 border-2 border-gray-200 rounded-xl text-center text-xl font-black text-brazil-blue focus:border-brazil-green focus:ring-0 outline-none transition-colors" placeholder="-" />
-                  </div>
-
-                  {/* Time Visitante */}
-                  <div className="flex flex-col items-center flex-1">
-                    <img src={match.awayLogo} alt={match.away} className="w-10 h-10 object-contain mb-1" />
-                    <span className="text-[11px] font-bold text-gray-800 truncate w-full text-center">{match.away}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <motion.button 
-            whileTap={{ scale: 0.95 }}
-            onClick={handleSaveAndPay}
-            className="w-full bg-brazil-yellow text-brazil-blue py-4 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:brightness-105 transition-all"
-          >
-            Confirmar e Gerar Pix
-          </motion.button>
-
-          {/* Botão de Avaliar o App Restaurado e Funcionando */}
-          <div className="bg-brazil-blue/5 border border-brazil-blue/10 rounded-xl p-4 mt-8 flex flex-col items-center text-center gap-3">
-            <div className="flex text-brazil-yellow">
-              <Star fill="currentColor" size={24} />
-              <Star fill="currentColor" size={24} />
-              <Star fill="currentColor" size={24} />
-              <Star fill="currentColor" size={24} />
-              <Star fill="currentColor" size={24} />
-            </div>
-            <div>
-              <h4 className="font-bold text-brazil-blue text-sm">Gostando do Bolão Brasil?</h4>
-              <p className="text-xs text-gray-500">Ajude a divulgar o app para mais torcedores avaliando a gente nas lojas.</p>
-            </div>
-            <button 
-              onClick={() => alert('Redirecionando para a loja de aplicativos... Muito obrigado pelo seu feedback!')}
-              className="bg-white border-2 border-brazil-blue text-brazil-blue font-bold text-xs px-6 py-2 rounded-full hover:bg-brazil-blue hover:text-white transition-colors cursor-pointer"
-            >
-              Avaliar Aplicativo
-            </button>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Fluxo 2: Loading da Efí Bank */}
-      {step === 'gerando_pix' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
-          <Loader2 size={48} className="text-brazil-green animate-spin" />
-          <h3 className="font-bold text-brazil-blue text-lg">Registrando Palpites...</h3>
-          <p className="text-gray-500 text-sm text-center max-w-xs">Comunicando com o Banco Central para gerar sua chave de pagamento.</p>
-        </motion.div>
-      )}
-
-      {/* Fluxo 3: Checkout Pix */}
-      {step === 'checkout' && (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6 pt-4">
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-lg text-center space-y-6">
-            <div className="w-16 h-16 bg-brazil-green/10 rounded-full flex items-center justify-center mx-auto text-brazil-green">
-              <QrCode size={32} />
-            </div>
-            
-            <div>
-              <h2 className="text-2xl font-black text-brazil-blue">R$ 20,00</h2>
-              <p className="text-sm text-gray-500 mt-1">Pague via Pix para trancar seus palpites.</p>
-            </div>
-
-            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 break-all text-xs text-gray-600 font-mono text-left relative">
-              {pixCopiaECola}
-            </div>
-
-            <button 
-              onClick={handleCopyPix}
-              className={`w-full py-4 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${
-                copiado ? 'bg-brazil-green text-white' : 'bg-brazil-blue text-white hover:bg-blue-900'
-              }`}
-            >
-              {copiado ? <><CheckCircle2 size={20} /> Código Copiado!</> : <><Copy size={20} /> Copiar Código Pix</>}
-            </button>
-
-            <div className="flex items-center justify-center gap-2 text-xs text-gray-400 font-medium pt-2">
-              <Loader2 size={14} className="animate-spin" /> Aguardando confirmação do pagamento...
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2 bg-gray-100 p-4 rounded-xl border border-gray-200">
-            <ShieldAlert size={20} className="text-gray-500 shrink-0" />
-            <p className="text-[11px] text-gray-600 leading-relaxed">
-              O pagamento é processado instantaneamente pela Efí Bank. Assim que o Pix for confirmado, seus palpites estarão oficialmente valendo no ranking da liga.
+          <div>
+            <h2 className="text-2xl font-black text-gray-800 tracking-tight">Palpites Cravados!</h2>
+            <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+              Tudo pronto para a rodada. Agora você precisa pagar a cota da liga para validar seus pontos.
             </p>
           </div>
-        </motion.div>
+          <button 
+            onClick={() => navigate('/pix')} 
+            className="w-full bg-brazil-yellow text-brazil-blue font-black py-4 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:brightness-105 transition-all uppercase text-xs tracking-wider"
+          >
+            PAGAR COTA (PIX)
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 space-y-6 max-w-md mx-auto pb-24 bg-gray-50 min-h-screen">
+      <Helmet><title>Cravar Palpites | Bolão Brasil</title></Helmet>
+
+      {/* Cabeçalho */}
+      <div className="flex items-center gap-3 mb-6 mt-2">
+        <button onClick={() => navigate(-1)} className="p-2 bg-white rounded-full text-gray-600 shadow-sm border border-gray-100 hover:bg-gray-50">
+          <ArrowLeft size={20} />
+        </button>
+        <div>
+          <h2 className="text-xl font-black text-gray-800 tracking-tight leading-none">Cravar Palpites</h2>
+          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Rodada Atual</p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 opacity-50">
+          <div className="w-8 h-8 border-4 border-brazil-green border-t-brazil-yellow rounded-full animate-spin mb-4" />
+          <p className="text-xs font-bold uppercase tracking-widest">Buscando Jogos...</p>
+        </div>
+      ) : jogos.length === 0 ? (
+        <div className="bg-white p-8 rounded-2xl border border-gray-100 text-center space-y-4">
+          <AlertCircle size={40} className="text-gray-300 mx-auto" />
+          <h3 className="font-bold text-gray-800">Nenhum jogo na rodada</h3>
+          <p className="text-xs text-gray-500">O organizador (Admin) ainda não importou os jogos desta rodada via IA.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Alerta de Dica */}
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex gap-3 items-start">
+            <Trophy size={16} className="text-blue-500 mt-0.5 shrink-0" />
+            <p className="text-[10px] text-blue-800 font-medium leading-relaxed">
+              <strong>Placar exato:</strong> 25 pts | <strong>Vencedor e Saldo:</strong> 15 pts | <strong>Só Vencedor:</strong> 10 pts
+            </p>
+          </div>
+
+          {/* Lista de Jogos */}
+          {jogos.map((jogo) => (
+            <div key={jogo.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brazil-green to-brazil-yellow"></div>
+              
+              <div className="text-center mb-4 mt-1">
+                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{jogo.data || 'Data a definir'} • {jogo.hora || '16:00'}</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">{jogo.estadio || 'Estádio a definir'}</p>
+              </div>
+
+              <div className="flex items-center justify-between gap-4">
+                {/* Time Casa */}
+                <div className="flex flex-col items-center flex-1">
+                  <span className="font-bold text-sm text-gray-800 text-center uppercase truncate w-full">{jogo.home}</span>
+                </div>
+
+                {/* Placar Inputs */}
+                <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl border border-gray-200">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={palpites[jogo.id]?.home || ''}
+                    onChange={(e) => handleScoreChange(jogo.id, 'home', e.target.value)}
+                    className="w-10 h-10 bg-white border border-gray-300 rounded-lg text-center font-black text-lg focus:border-brazil-blue focus:ring-2 focus:ring-brazil-blue/20 outline-none transition-all"
+                  />
+                  <span className="text-gray-400 font-black text-sm">X</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={palpites[jogo.id]?.away || ''}
+                    onChange={(e) => handleScoreChange(jogo.id, 'away', e.target.value)}
+                    className="w-10 h-10 bg-white border border-gray-300 rounded-lg text-center font-black text-lg focus:border-brazil-blue focus:ring-2 focus:ring-brazil-blue/20 outline-none transition-all"
+                  />
+                </div>
+
+                {/* Time Visitante */}
+                <div className="flex flex-col items-center flex-1">
+                  <span className="font-bold text-sm text-gray-800 text-center uppercase truncate w-full">{jogo.away}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Botão Salvar */}
+          <button 
+            onClick={handleSalvarPalpites}
+            disabled={salvando}
+            className="w-full bg-brazil-blue text-white font-black py-4 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:bg-blue-900 disabled:opacity-50 transition-all uppercase text-xs tracking-wider mt-6"
+          >
+            {salvando ? 'Salvando Palpites...' : 'Salvar e Ir para Pagamento'}
+          </button>
+          
+          <div className="flex items-center justify-center gap-1 mt-3">
+            <ShieldCheck size={12} className="text-brazil-green" />
+            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Transação segura 256-bit</span>
+          </div>
+        </div>
       )}
     </div>
   );

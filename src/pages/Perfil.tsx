@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { UserCircle2, Key, ShieldCheck, LogOut, Calendar, Fingerprint, AlertCircle, Gift } from 'lucide-react';
+import { UserCircle2, Key, ShieldCheck, LogOut, Calendar, Fingerprint, AlertCircle, Gift, Coins, ArrowLeft } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../lib/firebase';
@@ -187,21 +187,39 @@ export default function Perfil() {
         </button>
       </div>
 
-      {/* --- BANNER INDIQUE E GANHE NO PERFIL --- */}
-      <div 
-        onClick={() => navigate('/indique')}
-        className="bg-brazil-yellow/20 rounded-2xl p-4 border-2 border-dashed border-brazil-yellow flex items-center justify-between cursor-pointer hover:bg-brazil-yellow/30 transition-colors shadow-sm"
-      >
-        <div className="flex items-center gap-3">
-          <Gift size={28} className="text-brazil-yellow" />
-          <div>
-            <h3 className="font-black text-brazil-blue text-sm leading-none uppercase tracking-wide">Indique e Ganhe</h3>
-            <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-widest">Ganhe créditos por convite</p>
+      {/* --- MENU DE RECOMPENSAS NO PERFIL --- */}
+      <div className="grid grid-cols-1 gap-3">
+        <div 
+          onClick={() => navigate('/caixa-misteriosa')}
+          className="bg-brazil-blue rounded-2xl p-4 border border-blue-900 flex items-center justify-between cursor-pointer shadow-md"
+        >
+          <div className="flex items-center gap-3">
+            <div className="bg-brazil-yellow p-2.5 rounded-xl">
+              <Coins size={24} className="text-brazil-blue" />
+            </div>
+            <div>
+              <h3 className="font-black text-white text-sm leading-none uppercase tracking-wide">Minha Sorte Diária</h3>
+              <p className="text-[10px] font-bold text-brazil-yellow/80 mt-1 uppercase tracking-widest">Resgate seu bônus de hoje</p>
+            </div>
           </div>
+          <ArrowLeft size={18} className="text-white/30 rotate-180" />
         </div>
-        <span className="bg-brazil-yellow text-brazil-blue text-[10px] font-black px-4 py-2.5 rounded-xl uppercase shadow-sm tracking-widest">
-          Meu Código
-        </span>
+
+        <div 
+          onClick={() => navigate('/indique')}
+          className="bg-brazil-yellow/20 rounded-2xl p-4 border-2 border-dashed border-brazil-yellow flex items-center justify-between cursor-pointer hover:bg-brazil-yellow/30 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <Gift size={28} className="text-brazil-yellow" />
+            <div>
+              <h3 className="font-black text-brazil-blue text-sm leading-none uppercase tracking-wide">Indique e Ganhe</h3>
+              <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-widest">Ganhe créditos por convite</p>
+            </div>
+          </div>
+          <span className="bg-brazil-yellow text-brazil-blue text-[10px] font-black px-4 py-2.5 rounded-xl uppercase shadow-sm tracking-widest">
+            Convidar
+          </span>
+        </div>
       </div>
 
       {/* Menu Secundário */}

@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { db } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 
 interface AuthContextType {
   user: any;
   saldo: number;
-  login: (telefone: string) => void;
   logout: () => void;
 }
 
@@ -15,12 +15,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any>(null);
   const [saldo, setSaldo] = useState(0);
 
-  // Monitor de Saldo em Tempo Real
+  // 1. O Cérebro: Fica escutando 24h se o usuário está logado no Google
   useEffect(() => {
-    if (user?.telefone) {
-      const unsub = onSnapshot(doc(db, "usuarios", user.telefone), (doc) => {
-        if (doc.exists()) {
-          setSaldo(doc.data().saldo || 0);
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribeAuth(); // Limpa o monitoramento se fechar o app
+  }, []);
+
+  // 2. Monitor de Saldo em Tempo Real (Agora ligado ao UID do Google)
+  useEffect(() => {
+    if (user?.uid) {
+      // Puxa o saldo da ficha do usuário direto do Firebase
+      const unsub = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+        if (docSnap.exists()) {
+          setSaldo(docSnap.data().saldo || 0);
         }
       });
       return () => unsub();
@@ -29,37 +38,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [user]);
 
-  // Quando o app abre, ele procura se já tem alguém salvo na memória
-  useEffect(() => {
-    const usuarioSalvo = localStorage.getItem('@BolaoBrasil:user');
-    if (usuarioSalvo) {
-      setUser(JSON.parse(usuarioSalvo));
+  // 3. Função oficial para deslogar
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+      setSaldo(0);
+    } catch (error) {
+      console.error("Erro ao sair:", error);
     }
-  }, []);
-
-  // Quando o app abre, ele procura se já tem alguém salvo na memória
-  useEffect(() => {
-    const usuarioSalvo = localStorage.getItem('@BolaoBrasil:user');
-    if (usuarioSalvo) {
-      setUser(JSON.parse(usuarioSalvo));
-    }
-  }, []);
-
-  // Função que o botão de Login vai chamar
-  const login = (telefone: string) => {
-    const novoUsuario = { telefone, logado: true };
-    setUser(novoUsuario);
-    localStorage.setItem('@BolaoBrasil:user', JSON.stringify(novoUsuario));
-  };
-
-  // Função que o botão Sair vai chamar
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('@BolaoBrasil:user');
   };
 
   return (
-    <AuthContext.Provider value={{ user, saldo, login, logout }}>
+    <AuthContext.Provider value={{ user, saldo, logout }}>
       {children}
     </AuthContext.Provider>
   );

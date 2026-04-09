@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   PlusCircle, Users, Calendar, CheckSquare, BarChart3, QrCode,
-  ChevronDown, ChevronUp, Trophy, Share2, Star, ShieldCheck, Lock, Gift
+  ChevronDown, ChevronUp, Trophy, Share2, Star, ShieldCheck, Lock, Gift, Coins
 } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { generateWebApplicationSchema, generateFAQSchema } from '../utils/schema';
@@ -205,25 +205,51 @@ const Home: React.FC = () => {
           ))}
         </div>
 
-        {/* --- BANNER INDIQUE E GANHE NA HOME --- */}
-        <motion.div 
-          whileTap={{ scale: 0.98 }}
-          onClick={() => navigate('/indique')} 
-          className="bg-gradient-to-r from-brazil-yellow to-[#FFD700] rounded-xl p-4 shadow-sm border border-yellow-300 flex items-center justify-between cursor-pointer"
-        >
-          <div className="flex items-center gap-3">
-            <div className="bg-white/30 p-2 rounded-xl">
-              <Gift size={24} className="text-brazil-blue" />
+        {/* --- BANNERS DE ENGAJAMENTO (ROLETA E INDIQUE) --- */}
+        <div className="grid grid-cols-1 gap-3">
+          {/* Banner Roleta Diária */}
+          <motion.div 
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('/caixa-misteriosa')} 
+            className="bg-brazil-blue rounded-xl p-4 shadow-lg border border-blue-800 flex items-center justify-between cursor-pointer overflow-hidden relative"
+          >
+            <div className="absolute right-[-10px] top-[-10px] opacity-10">
+              <Coins size={80} className="text-white" />
             </div>
-            <div>
-              <h3 className="font-black text-brazil-blue text-sm uppercase tracking-tight">Indique e Ganhe R$2,00</h3>
-              <p className="text-[10px] text-brazil-blue/80 font-bold uppercase tracking-wider">Convide amigos para o bolão</p>
+            <div className="flex items-center gap-3 relative z-10">
+              <div className="bg-brazil-yellow p-2 rounded-xl shadow-sm">
+                <Gift size={24} className="text-brazil-blue" />
+              </div>
+              <div>
+                <h3 className="font-black text-white text-sm uppercase tracking-tight italic">Bônus Diário Grátis</h3>
+                <p className="text-[10px] text-brazil-yellow font-bold uppercase tracking-wider">Abra sua caixa misteriosa</p>
+              </div>
             </div>
-          </div>
-          <div className="bg-white text-brazil-blue text-[10px] font-black px-3 py-2 rounded-xl shadow-sm uppercase tracking-widest flex items-center gap-1">
-            Resgatar
-          </div>
-        </motion.div>
+            <div className="bg-brazil-yellow text-brazil-blue text-[10px] font-black px-4 py-2 rounded-xl shadow-md uppercase tracking-widest animate-pulse relative z-10">
+              Girar
+            </div>
+          </motion.div>
+
+          {/* Banner Indique e Ganhe */}
+          <motion.div 
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('/indique')} 
+            className="bg-gradient-to-r from-brazil-yellow to-[#FFD700] rounded-xl p-4 shadow-sm border border-yellow-300 flex items-center justify-between cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-white/30 p-2 rounded-xl">
+                <Share2 size={24} className="text-brazil-blue" />
+              </div>
+              <div>
+                <h3 className="font-black text-brazil-blue text-sm uppercase tracking-tight">Indique e Ganhe R$2,00</h3>
+                <p className="text-[10px] text-brazil-blue/80 font-bold uppercase tracking-wider">Convide sua galera</p>
+              </div>
+            </div>
+            <div className="bg-white text-brazil-blue text-[10px] font-black px-3 py-2 rounded-xl shadow-sm uppercase tracking-widest">
+              Convidar
+            </div>
+          </motion.div>
+        </div>
 
         {/* Destaques da Rodada (Ligas Reais Integradas) */}
         <div className="space-y-3">

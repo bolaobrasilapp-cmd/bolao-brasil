@@ -16,14 +16,8 @@ const Perfil = lazy(() => import('./pages/Perfil'));
 const Legal = lazy(() => import('./pages/Legal'));
 const Calendario = lazy(() => import('./pages/Calendario'));
 const Admin = lazy(() => import('./pages/Admin'));
-const Indique = lazy(() => import('./pages/Indique')); // <-- NOSSA PÁGINA NOVA AQUI
-
-const Placeholder = ({ title }: { title: string }) => (
-  <div className="p-8 text-center space-y-4 mt-10">
-    <h2 className="text-2xl font-bold text-brazil-blue">{title}</h2>
-    <p className="text-gray-500">Esta tela está em construção para o nosso MVP! ⚽</p>
-  </div>
-);
+const Indique = lazy(() => import('./pages/Indique'));
+const CaixaMisteriosa = lazy(() => import('./pages/CaixaMisteriosa'));
 
 export default function App() {
   return (
@@ -47,7 +41,8 @@ export default function App() {
                 <Route path="pix" element={<Pix />} />
                 <Route path="perfil" element={<Perfil />} />
                 <Route path="admin" element={<Admin />} />
-                <Route path="indique" element={<Indique />} /> {/* <-- NOSSA ROTA NOVA AQUI */}
+                <Route path="indique" element={<Indique />} />
+                <Route path="caixa-misteriosa" element={<CaixaMisteriosa />} />
                 <Route path="legal/:pagina" element={<Legal />} />
               </Route>
             </Routes>
