@@ -13,30 +13,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { apiVersion: 'v1' });
 
-  const prompt = `Você é um robô que extrai dados de jogos de futebol e responde APENAS com um array JSON.
-  Extraia os jogos do texto abaixo e siga este formato:
-  [
-    {
-      "home": "Nome do Time Casa",
-      "away": "Nome do Time Fora",
-      "data": "DD/MM",
-      "hora": "HH:MM",
-      "homeEmoji": "⚽",
-      "awayEmoji": "⚽",
-      "estadio": "Nome do Estádio",
-      "categoria": "${categoria}",
-      "rodada": ${rodada}
-    }
-  ]
+  const prompt = `Extraia os jogos de futebol do texto abaixo e retorne APENAS um array JSON puro, sem formatação markdown.
+  Siga rigorosamente este formato para cada objeto:
+  {
+    "home": "Time Casa",
+    "away": "Time Fora",
+    "data": "DD/MM",
+    "hora": "HH:MM",
+    "estadio": "Nome do Estádio",
+    "categoria": "${categoria}",
+    "rodada": ${rodada}
+  }
 
-  Regras:
-  - Não use markdown (sem \` \` \`).
-  - Responda apenas o array [].
-  - Se não encontrar estádio, deixe vazio "".
-  
-  Texto para processar: ${textoBruto}`;
+  Texto: ${textoBruto}`;
 
   try {
     const result = await model.generateContent(prompt);
