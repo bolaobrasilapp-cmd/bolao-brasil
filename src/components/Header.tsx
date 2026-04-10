@@ -1,11 +1,29 @@
 import React, { useState } from 'react';
-import { Menu, UserCircle2, X, Settings, HelpCircle, LogOut } from 'lucide-react';
+import { Menu, UserCircle2, X, HelpCircle, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
+import { auth } from '../lib/firebase';
+import { signOut } from 'firebase/auth';
 
 export const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
+
+  const handleSair = async () => {
+    try {
+      await signOut(auth);
+      localStorage.clear();
+      setIsMenuOpen(false);
+      navigate('/login');
+    } catch (error) {
+      console.error("Erro ao sair:", error);
+    }
+  };
+
+  const irParaAjuda = () => {
+    setIsMenuOpen(false);
+    navigate('/ajuda');
+  };
 
   return (
     <>
@@ -64,8 +82,8 @@ export const Header: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <UserCircle2 size={32} />
                   <div>
-                    <p className="font-bold text-sm">Torcedor</p>
-                    <p className="text-[10px] text-brazil-yellow">Verificado</p>
+                    <p className="font-bold text-sm">Menu Bolão</p>
+                    <p className="text-[10px] text-brazil-yellow">100% Seguro</p>
                   </div>
                 </div>
                 <button onClick={() => setIsMenuOpen(false)}>
@@ -73,15 +91,23 @@ export const Header: React.FC = () => {
                 </button>
               </div>
               <div className="flex-1 py-4 flex flex-col gap-2 px-4">
-                <button className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg text-gray-700 font-medium text-left">
-                  <Settings size={20} className="text-brazil-green" /> Configurações da Conta
-                </button>
-                <button className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg text-gray-700 font-medium text-left">
+                
+                {/* Botão de Ajuda Linkado */}
+                <button 
+                  onClick={irParaAjuda}
+                  className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg text-gray-700 font-medium text-left transition-colors"
+                >
                   <HelpCircle size={20} className="text-brazil-blue" /> Central de Ajuda
                 </button>
-                <button className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg text-red-500 font-medium text-left mt-auto">
+                
+                {/* Botão de Sair Funcional */}
+                <button 
+                  onClick={handleSair}
+                  className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg text-red-500 font-medium text-left mt-auto transition-colors"
+                >
                   <LogOut size={20} /> Sair da Conta
                 </button>
+
               </div>
             </motion.div>
           </>
