@@ -3,43 +3,50 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return res.status(405).send('Método não permitido');
 
-  // Puxando a chave DIRETA (sem RapidAPI)
   const apiKey = process.env.API_SPORTS_KEY;
-  
-  if (!apiKey) {
-    return res.status(500).json({ error: 'Falta a API_SPORTS_KEY na Vercel.' });
-  }
+  if (!apiKey) return res.status(500).json({ error: 'Falta a API_SPORTS_KEY na Vercel.' });
 
   try {
-    // Link direto para o servidor da API-Football mundial. (Liga 71 = Brasileirão)
-    const url = `https://v3.football.api-sports.io/fixtures?league=71&next=10`;
+    // ESTRATÉGIA NINJA: Em vez de usar "next=10" (que é pago), 
+    // pedimos a tabela de 2026 inteira da Série A (ID 71) que é liberada no plano Free.
+    const url = `https://v3.football.api-sports.io/fixtures?league=71&season=2026`;
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: { 
-        'x-apisports-key': apiKey 
-      }
+      headers: { 'x-apisports-key': apiKey }
     });
 
     const data: any = await response.json();
 
-    // Se o site deles recusar a chave
     if (data.errors && Object.keys(data.errors).length > 0) {
-      return res.status(401).json({ 
-        error: 'Chave Oficial Inválida', 
-        detalhe: JSON.stringify(data.errors) 
-      });
+      return res.status(401).json({ error: 'Erro na API', detalhe: JSON.stringify(data.errors) });
     }
 
-    if (!data.response || data.response.length === 0) {
+    const fixtures = data.response || [];
+
+    if (fixtures.length === 0) {
       return res.status(404).json({ 
-        error: 'Jogos não encontrados', 
-        detalhe: 'A API não encontrou jogos pendentes. Confirme se a rodada atual já terminou.' 
+        error: 'Tabela Vazia', 
+        detalhe: 'A API não retornou os jogos de 2026.' 
       });
     }
 
-    // Traduz do banco de dados oficial para o seu Firebase
-    const formatados = data.response.map((j: any) => {
+    // O NOSSO ROBÔ FAZ O TRABALHO DO PLANO PAGO AQUI:
+    const agora = Math.floor(Date.now() / 1000); // Horário de agora em segundos
+
+    const proximos = fixtures
+      .filter((j: any) => j.fixture.timestamp > agora) // Pega só o que ainda vai acontecer
+      .sort((a: any, b: any) => a.fixture.timestamp - b.fixture.timestamp) // Ordena pela data
+      .slice(0, 10); // Corta os 10 primeiros
+
+    if (proximos.length === 0) {
+       return res.status(404).json({ 
+         error: 'Fim de Linha', 
+         detalhe: 'Todos os jogos do Brasileirão 2026 já aconteceram.' 
+       });
+    }
+
+    const formatados = proximos.map((j: any) => {
       const d = new Date(j.fixture.date);
       const numeroRodada = j.league.round.replace(/[^0-9]/g, '') || '11';
 
@@ -57,6 +64,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json(formatados);
 
   } catch (error: any) {
-    return res.status(500).json({ error: 'Erro de rede', detalhe: error.message });
+    return res.status(500).json({ error: 'Erro técnico', detalhe: error.message });
   }
 }
