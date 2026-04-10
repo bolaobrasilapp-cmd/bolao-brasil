@@ -13,6 +13,8 @@ export default function CriarLiga() {
   const [tipo, setTipo] = useState<'privada' | 'publica'>('privada');
   const [valor, setValor] = useState<number>(20);
   const [campeonato, setCampeonato] = useState('brasileirao');
+  const [isCustom, setIsCustom] = useState(false);
+  const [customValue, setCustomValue] = useState('');
   
   // Estados de controle
   const [loading, setLoading] = useState(false);
