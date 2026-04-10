@@ -9,8 +9,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Chave RAPIDAPI_KEY não configurada na Vercel.' });
   }
 
-  // ID 71 = Brasileirão Série A. Pega os próximos 10 jogos confirmados.
-  const url = 'https://v3.football.api-sports.io/fixtures?league=71&next=10';
+  // CORREÇÃO: Adicionado o parâmetro &season=2026 para a API não se perder nas datas
+  const url = 'https://v3.football.api-sports.io/fixtures?league=71&season=2026&next=10';
 
   try {
     const response = await fetch(url, {
@@ -23,20 +23,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const data: any = await response.json();
 
-    if (data.errors && data.errors.length > 0) {
-      return res.status(500).json({ error: 'Erro na API-Football', detalhe: data.errors });
+    // Se a chave estiver errada ou bater limite
+    if (data.errors && Object.keys(data.errors).length > 0) {
+      return res.status(500).json({ error: 'Erro na API-Football', detalhe: JSON.stringify(data.errors) });
+    }
+
+    // Se a API responder, mas a lista de jogos vier vazia
+    if (!data.response || data.response.length === 0) {
+      return res.status(400).json({ 
+        error: 'Nenhum jogo encontrado', 
+        detalhe: `A API conectou, mas a lista de 2026 veio vazia. Resposta bruta: ${JSON.stringify(data)}` 
+      });
     }
 
     // Traduz o formato complexo da API mundial para o padrão do seu Firebase
     const jogosFormatados = data.response.map((jogo: any) => {
-      // Ajusta o fuso horário para o Brasil
       const dataLocal = new Date(jogo.fixture.date);
       const dia = String(dataLocal.getDate()).padStart(2, '0');
       const mes = String(dataLocal.getMonth() + 1).padStart(2, '0');
       const horas = String(dataLocal.getHours()).padStart(2, '0');
       const minutos = String(dataLocal.getMinutes()).padStart(2, '0');
 
-      // Extrai apenas o número da rodada (Ex: "Regular Season - 12" vira "12")
+      // Extrai apenas o número da rodada (Ex: "Regular Season - 1" vira "1")
       const numeroRodada = jogo.league.round.replace(/[^0-9]/g, '') || '1';
 
       return {
