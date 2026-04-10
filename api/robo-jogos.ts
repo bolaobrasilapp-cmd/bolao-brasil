@@ -6,14 +6,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const apiKey = process.env.RAPIDAPI_KEY;
   if (!apiKey) return res.status(500).json({ error: 'Falta a RAPIDAPI_KEY na Vercel.' });
 
-  // MUDANÇA: Agora usamos o endereço da SportAPI (rapidsportapi)
-  const host = 'sportapi7.p.rapidapi.com';
-  
-  // No SportAPI, o ID do Brasileirão Série A geralmente é o 152
-  const leagueId = '152'; 
+  // CONFIGURAÇÃO PARA A "FREE API LIVE FOOTBALL DATA" (Smart API)
+  const host = 'free-api-live-football-data.p.rapidapi.com';
+  const leagueId = '13'; // ID oficial do Brasileirão Série A nesta API
 
   try {
-    const url = `https://${host}/api/v1/sport/football/league/${leagueId}/events/next`;
+    // Buscamos todos os jogos da liga para filtrar os próximos
+    const url = `https://${host}/football-get-all-fixtures-by-league?leagueId=${leagueId}`;
     
     const response = await fetch(url, {
       method: 'GET',
@@ -25,42 +24,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const data: any = await response.json();
 
-    // Se der erro de assinatura
-    if (data.message && data.message.includes('not subscribed')) {
-      return res.status(401).json({ 
-        error: 'Assinatura Errada', 
-        detalhe: 'Você assinou a API do milad niknam, mas este código precisa da SportAPI (rapidsportapi).' 
-      });
-    }
-
-    if (!data.events || data.events.length === 0) {
+    if (!data.status || !data.response || !data.response.fixtures) {
       return res.status(404).json({ 
         error: 'Jogos não encontrados', 
-        detalhe: 'A SportAPI não retornou jogos. Verifique se a assinatura da SportAPI (rapidsportapi) está ATIVA.' 
+        detalhe: 'A API não retornou a lista de jogos. Verifique se a assinatura está ativa.' 
       });
     }
 
-    // Traduz para o formato do Bolão Brasil
-    const jogosFormatados = data.events.slice(0, 10).map((item: any) => {
-      const d = new Date(item.startTimestamp * 1000); // Converte timestamp
-      
-      const dia = String(d.getDate()).padStart(2, '0');
-      const mes = String(d.getMonth() + 1).padStart(2, '0');
-      const horas = String(d.getHours()).padStart(2, '0');
-      const minutos = String(d.getMinutes()).padStart(2, '0');
+    // Pegamos o horário de agora
+    const agora = new Date();
 
+    // Filtramos apenas os jogos que ainda vão acontecer
+    const proximos = data.response.fixtures
+      .filter((j: any) => {
+        // Tenta converter a data da API (formato DD-MM-YYYY)
+        const [dia, mes, ano] = j.date.split('-');
+        const dataJogo = new Date(`${ano}-${mes}-${dia}T${j.time}:00`);
+        return dataJogo > agora;
+      })
+      .slice(0, 10); // Pega os 10 primeiros da fila
+
+    const formatados = proximos.map((j: any) => {
       return {
-        home: item.homeTeam.name,
-        away: item.awayTeam.name,
-        data: `${dia}/${mes}`,
-        hora: `${horas}:${minutos}`,
-        estadio: item.venue?.name || "A Definir",
+        home: j.home_team,
+        away: j.away_team,
+        data: j.date.substring(0, 5).replace('-', '/'), // Vira DD/MM
+        hora: j.time,
+        estadio: j.stadium || "A Definir",
         categoria: "brasileirao",
-        rodada: item.roundInfo?.round || 11
+        rodada: Number(j.round) || 11
       };
     });
 
-    return res.status(200).json(jogosFormatados);
+    return res.status(200).json(formatados);
 
   } catch (error: any) {
     return res.status(500).json({ error: 'Erro de conexão', detalhe: error.message });
