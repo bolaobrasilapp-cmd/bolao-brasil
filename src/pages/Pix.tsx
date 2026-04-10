@@ -27,12 +27,14 @@ const Pix: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          valor: 20.00, // Valor fixo para a primeira liga teste
+          valor: 20.00,
           cpf: form.cpf,
           nome: form.nome,
+          uid: user?.uid, // <-- LINHA VITAL: Avisa ao robô quem vai ganhar o saldo
           descricao: 'Cota Bolão Primeira Liga'
         })
       });
+      // ... resto do código igual
 
       const data = await response.json();
 

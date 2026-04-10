@@ -22,6 +22,7 @@ export default function Admin() {
   
   // Estados para Robôs e IA Manual
   const [loadingIA, setLoadingIA] = useState(false);
+  const [loadingWebhook, setLoadingWebhook] = useState(false); // NOVO
   const [loadingResultados, setLoadingResultados] = useState(false);
   const [debugErro, setDebugErro] = useState('');
   const [textoIA, setTextoIA] = useState('');
@@ -137,7 +138,19 @@ export default function Admin() {
         alert('Nenhum jogo com placar oficial encontrado no momento.');
         return;
       }
-
+const ativarWebhookEfi = async () => {
+    setLoadingWebhook(true);
+    try {
+      const res = await fetch('/api/configurar-webhook', { method: 'POST' });
+      const data = await res.json();
+      if (data.sucesso) alert("🚀 SUCESSO! A Efí agora está conectada ao Bolão Brasil.");
+      else alert("❌ Erro: " + JSON.stringify(data.detalhe));
+    } catch (e) {
+      alert("Erro na rede.");
+    } finally {
+      setLoadingWebhook(false);
+    }
+  };
       const batch = writeBatch(db);
       data.forEach((resultado: any) => {
         const idUnico = `${resultado.home}_${resultado.away}_R${resultado.rodada}`.replace(/[^a-zA-Z0-9]/g, '');
@@ -359,6 +372,18 @@ export default function Admin() {
                         <p className="text-xs text-gray-400">O usuário já recebeu o comprovante no painel.</p>
                       </div>
                     </div>
+                    {abaAtiva === 'dashboard' && (
+          <div className="space-y-4">
+             <div className="bg-gray-800 p-5 rounded-2xl border border-brazil-blue/30">
+                <h4 className="text-white font-black text-sm mb-3">CONEXÃO BANCÁRIA</h4>
+                <button 
+                  onClick={ativarWebhookEfi} 
+                  disabled={loadingWebhook}
+                  className="w-full bg-brazil-blue text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest"
+                >
+                  {loadingWebhook ? "ATIVANDO..." : "Ligar Webhook Efí (Clique 1x)"}
+                </button>
+             </div>
                   )}
                 </div>
               </div>
