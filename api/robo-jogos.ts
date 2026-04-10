@@ -9,42 +9,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Chave RAPIDAPI_KEY não configurada na Vercel.' });
   }
 
-  // CORREÇÃO: Adicionado o parâmetro &season=2026 para a API não se perder nas datas
-  const url = 'https://v3.football.api-sports.io/fixtures?league=71&season=2026&next=10';
+  // URL e Host específicos para quem usa a chave da RAPIDAPI
+  const url = 'https://api-football-v1.p.rapidapi.com/v3/fixtures?league=71&season=2026&next=10';
+  const host = 'api-football-v1.p.rapidapi.com';
 
   try {
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'x-rapidapi-host': 'v3.football.api-sports.io',
+        'x-rapidapi-host': host,
         'x-rapidapi-key': apiKey
       }
     });
 
     const data: any = await response.json();
 
-    // Se a chave estiver errada ou bater limite
+    // Verifica se a RapidAPI ou o provedor retornaram erro de chave
     if (data.errors && Object.keys(data.errors).length > 0) {
-      return res.status(500).json({ error: 'Erro na API-Football', detalhe: JSON.stringify(data.errors) });
-    }
-
-    // Se a API responder, mas a lista de jogos vier vazia
-    if (!data.response || data.response.length === 0) {
-      return res.status(400).json({ 
-        error: 'Nenhum jogo encontrado', 
-        detalhe: `A API conectou, mas a lista de 2026 veio vazia. Resposta bruta: ${JSON.stringify(data)}` 
+      return res.status(401).json({ 
+        error: 'Chave Recusada', 
+        detalhe: JSON.stringify(data.errors) 
       });
     }
 
-    // Traduz o formato complexo da API mundial para o padrão do seu Firebase
+    if (!data.response || data.response.length === 0) {
+      return res.status(400).json({ 
+        error: 'Lista Vazia', 
+        detalhe: 'A API conectou mas não há jogos de 2026 cadastrados no sistema deles ainda.' 
+      });
+    }
+
+    // Traduz para o formato do Bolão Brasil
     const jogosFormatados = data.response.map((jogo: any) => {
       const dataLocal = new Date(jogo.fixture.date);
       const dia = String(dataLocal.getDate()).padStart(2, '0');
       const mes = String(dataLocal.getMonth() + 1).padStart(2, '0');
       const horas = String(dataLocal.getHours()).padStart(2, '0');
       const minutos = String(dataLocal.getMinutes()).padStart(2, '0');
-
-      // Extrai apenas o número da rodada (Ex: "Regular Season - 1" vira "1")
       const numeroRodada = jogo.league.round.replace(/[^0-9]/g, '') || '1';
 
       return {
@@ -61,6 +62,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json(jogosFormatados);
 
   } catch (error: any) {
-    return res.status(500).json({ error: 'Erro interno no robô', detalhe: error.message });
+    return res.status(500).json({ error: 'Erro no servidor', detalhe: error.message });
   }
 }
