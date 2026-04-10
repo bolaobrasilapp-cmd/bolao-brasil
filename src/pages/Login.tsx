@@ -2,88 +2,67 @@ import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../lib/firebase';
-import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { user } = useAuth(); // Nosso "olheiro" global
   const [isVerifying, setIsVerifying] = useState(true);
 
-  // 1. O "Leão de Chácara": Se o usuário já tiver logado, expulsa ele do Login e manda pra Home
   useEffect(() => {
-    if (user) {
-      navigate('/');
-    }
-  }, [user, navigate]);
+    // O "Cão de Guarda" oficial do Firebase (Funciona 100% no celular)
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          // Verifica se o usuário já existe na pasta 'usuarios'
+          const userRef = doc(db, "usuarios", user.uid);
+          const userSnap = await getDoc(userRef);
 
-  // Função centralizada para salvar o usuário no banco de dados
-  const saveUserToFirestore = async (firebaseUser: any) => {
-    try {
-      const userRef = doc(db, "usuarios", firebaseUser.uid);
-      const userSnap = await getDoc(userRef);
-
-      // Só cria o perfil se for o primeiro acesso
-      if (!userSnap.exists()) {
-        await setDoc(userRef, {
-          nome: firebaseUser.displayName,
-          email: firebaseUser.email,
-          foto: firebaseUser.photoURL,
-          pontos: 0,
-          saldo: 0,
-          uid: firebaseUser.uid,
-          dataCadastro: new Date().toISOString()
-        });
-      }
-      navigate('/');
-    } catch (error) {
-      console.error("Erro ao salvar no banco:", error);
-    }
-  };
-
-  // 2. O "Catcher": Fica esperando o usuário voltar do redirecionamento do Google (no Celular)
-  useEffect(() => {
-    const checkRedirect = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result?.user) {
-          await saveUserToFirestore(result.user);
+          // Se for o primeiro acesso da vida dele, cria a ficha
+          if (!userSnap.exists()) {
+            await setDoc(userRef, {
+              nome: user.displayName,
+              email: user.email,
+              foto: user.photoURL,
+              pontos: 0,
+              saldo: 0,
+              uid: user.uid,
+              dataCadastro: new Date().toISOString()
+            });
+          }
+          
+          // Sucesso! Manda para a Home
+          navigate('/');
+        } catch (error) {
+          console.error("Erro ao salvar perfil:", error);
+          setIsVerifying(false);
         }
-      } catch (error) {
-        console.error("Erro ao processar redirecionamento:", error);
-      } finally {
-        // Tira a tela de carregamento e mostra o botão se não houver login pendente
-        setIsVerifying(false); 
+      } else {
+        // Se não tem ninguém logado (ou se ele deslogou), mostra a tela verde
+        setIsVerifying(false);
       }
-    };
-    checkRedirect();
-  }, []);
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
 
   const handleGoogleLogin = async () => {
+    setIsVerifying(true); // Começa a girar a roleta de carregamento
     const provider = new GoogleAuthProvider();
-    // Detecta se é celular (iOS ou Android)
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     try {
-      if (isMobile) {
-        setIsVerifying(true); // Mostra o carregamento enquanto vai pro Google
-        await signInWithRedirect(auth, provider);
-      } else {
-        // No PC, o popup é melhor e mais rápido
-        const result = await signInWithPopup(auth, provider);
-        if (result.user) {
-          await saveUserToFirestore(result.user);
-        }
-      }
+      // Abre a aba segura de login do Google
+      await signInWithPopup(auth, provider);
+      // Não precisamos dar 'navigate' aqui. O Cão de Guarda lá em cima 
+      // vai detectar o login e fazer o redirecionamento sozinho!
     } catch (error) {
       console.error("Erro ao logar:", error);
-      alert("Falha na autenticação. Verifique sua conexão.");
-      setIsVerifying(false);
+      alert("Acesso cancelado ou falhou. Tente novamente.");
+      setIsVerifying(false); // Para de carregar se der erro
     }
   };
 
-  // TELA DE CARREGAMENTO (Evita que o botão pisque enquanto o Firebase pensa)
+  // TELA DE CARREGAMENTO (Evita piscar o botão)
   if (isVerifying) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-brazil-green text-white p-6 relative overflow-hidden">

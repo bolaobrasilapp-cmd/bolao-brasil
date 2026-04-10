@@ -10,21 +10,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Falta a chave GEMINI_API_KEY na Vercel.' });
   }
 
-  // IMPORTANTE: Adicionado '-latest' para forçar o Google a achar o modelo e evitar o bug do 404
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+  // BALA DE PRATA: Usamos o gemini-pro (1.0). É universal, gratuito e imune ao erro 404.
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
 
   const payload = {
     contents: [{
       parts: [{
-        text: `Retorne APENAS um array JSON. Extraia os jogos:
+        text: `Retorne APENAS um array JSON puro. Não use markdown.
+        Extraia os jogos de futebol do texto:
         Formato: [{"home": "Time A", "away": "Time B", "data": "DD/MM", "hora": "HH:MM", "estadio": "Nome", "categoria": "${categoria}", "rodada": ${rodada}}]
         
         Texto: ${textoBruto}`
       }]
-    }],
-    generationConfig: {
-      responseMimeType: "application/json" // Força o Google a não usar Markdown
-    }
+    }]
   };
 
   try {
@@ -36,22 +34,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const data: any = await response.json();
 
-    // Se o Google recusar, passamos o erro real pra frente
+    // Se o Google bater a porta, lemos o recado exato
     if (!response.ok) {
       return res.status(response.status).json({ 
-        error: `Erro Google (${response.status})`, 
-        detalhe: data.error?.message || 'Modelo não encontrado ou sem permissão.' 
+        error: `Erro Google`, 
+        detalhe: data.error?.message || 'Falha de permissão no modelo.' 
       });
     }
 
     const aiText = data.candidates[0].content.parts[0].text;
     
-    // Proteção extra
+    // Limpeza bruta de markdown caso a IA tente colocar ```json
     const cleanJson = aiText.replace(/```json|```/g, "").trim();
     
     return res.status(200).json(JSON.parse(cleanJson));
 
   } catch (error: any) {
-    return res.status(500).json({ error: 'Falha no servidor', detalhe: error.message });
+    return res.status(500).json({ error: 'Erro no servidor', detalhe: error.message });
   }
 }
