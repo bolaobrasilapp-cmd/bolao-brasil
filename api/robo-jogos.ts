@@ -3,67 +3,67 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return res.status(405).send('Método não permitido');
 
-  const apiKey = process.env.API_SPORTS_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'Falta a API_SPORTS_KEY na Vercel.' });
-
   try {
-    // ESTRATÉGIA NINJA: Em vez de usar "next=10" (que é pago), 
-    // pedimos a tabela de 2026 inteira da Série A (ID 71) que é liberada no plano Free.
-    const url = `https://v3.football.api-sports.io/fixtures?league=71&season=2026`;
+    // A ARMA SECRETA: API Pública do Cartola FC
+    // 100% Gratuita, focada no Brasileirão, sem precisar de API Key.
+    const url = 'https://api.cartolafc.globo.com/partidas';
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: { 'x-apisports-key': apiKey }
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0'
+      }
     });
 
     const data: any = await response.json();
 
-    if (data.errors && Object.keys(data.errors).length > 0) {
-      return res.status(401).json({ error: 'Erro na API', detalhe: JSON.stringify(data.errors) });
-    }
-
-    const fixtures = data.response || [];
-
-    if (fixtures.length === 0) {
+    if (!data || !data.partidas || data.partidas.length === 0) {
       return res.status(404).json({ 
-        error: 'Tabela Vazia', 
-        detalhe: 'A API não retornou os jogos de 2026.' 
+        error: 'Rodada Vazia', 
+        detalhe: 'A API do Cartola não retornou jogos. O campeonato pode estar em pausa momentânea.' 
       });
     }
 
-    // O NOSSO ROBÔ FAZ O TRABALHO DO PLANO PAGO AQUI:
-    const agora = Math.floor(Date.now() / 1000); // Horário de agora em segundos
+    // O Cartola separa os times (clubes) dos jogos (partidas)
+    const clubes = data.clubes;
+    const rodada = data.rodada;
 
-    const proximos = fixtures
-      .filter((j: any) => j.fixture.timestamp > agora) // Pega só o que ainda vai acontecer
-      .sort((a: any, b: any) => a.fixture.timestamp - b.fixture.timestamp) // Ordena pela data
-      .slice(0, 10); // Corta os 10 primeiros
-
-    if (proximos.length === 0) {
-       return res.status(404).json({ 
-         error: 'Fim de Linha', 
-         detalhe: 'Todos os jogos do Brasileirão 2026 já aconteceram.' 
-       });
-    }
-
-    const formatados = proximos.map((j: any) => {
-      const d = new Date(j.fixture.date);
-      const numeroRodada = j.league.round.replace(/[^0-9]/g, '') || '11';
+    // Traduz do formato Globo para o formato Bolão Brasil
+    const formatados = data.partidas.map((jogo: any) => {
+      // Pega o nome correto dos times usando os IDs
+      const timeCasa = clubes[jogo.clube_casa_id].nome;
+      const timeVisitante = clubes[jogo.clube_visitante_id].nome;
+      
+      // A data no Cartola vem no formato "YYYY-MM-DD HH:MM:SS"
+      // Substituímos o espaço por "T" para o Javascript ler perfeitamente
+      const dataHoraString = jogo.partida_data.replace(' ', 'T');
+      const dataHora = new Date(dataHoraString);
+      
+      const dia = String(dataHora.getDate()).padStart(2, '0');
+      const mes = String(dataHora.getMonth() + 1).padStart(2, '0');
+      const horas = String(dataHora.getHours()).padStart(2, '0');
+      const minutos = String(dataHora.getMinutes()).padStart(2, '0');
 
       return {
-        home: j.teams.home.name,
-        away: j.teams.away.name,
-        data: `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`,
-        hora: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
-        estadio: j.fixture.venue.name || "A Definir",
+        home: timeCasa,
+        away: timeVisitante,
+        data: `${dia}/${mes}`,
+        hora: `${horas}:${minutos}`,
+        estadio: jogo.local || "A Definir",
         categoria: "brasileirao",
-        rodada: Number(numeroRodada)
+        rodada: Number(rodada)
       };
     });
+
+    // Filtra apenas os jogos que ainda não terminaram (opcional, mas bom pra garantir)
+    // const agora = new Date();
+    // const proximos = formatados.filter((j: any) => ... ) 
+    // Como a API do Cartola já foca na rodada atual, mandamos tudo!
 
     return res.status(200).json(formatados);
 
   } catch (error: any) {
-    return res.status(500).json({ error: 'Erro técnico', detalhe: error.message });
+    return res.status(500).json({ error: 'Erro de rede', detalhe: error.message });
   }
 }
