@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, ShieldCheck, Users, DollarSign, ArrowLeft, Copy, Share2, CheckCircle2, PlusCircle } from 'lucide-react';
+import { Trophy, ShieldCheck, Users, DollarSign, ArrowLeft, Copy, Share2, CheckCircle2, PlusCircle, Coins } from 'lucide-react';
 import { db, auth } from '../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 
@@ -35,6 +35,14 @@ export default function CriarLiga() {
       return;
     }
 
+    // Define o valor final: ou o fixo ou o digitado no "Outro"
+    const valorFinal = isCustom ? Number(customValue) : valor;
+
+    if (!valorFinal || valorFinal <= 0) {
+      alert("Defina um valor válido para a entrada!");
+      return;
+    }
+
     const user = auth.currentUser;
     if (!user) {
       alert('Você precisa estar logado para criar uma liga.');
@@ -50,12 +58,12 @@ export default function CriarLiga() {
       await addDoc(collection(db, "ligas"), {
         nome: nomeLiga,
         tipo: tipo,
-        valorEntrada: valor,
+        valorEntrada: valorFinal,
         campeonato: campeonato,
         adminId: user.uid,
         codigo: novoCodigo,
-        participantesAtivos: 1, // O criador já conta como 1
-        premioAcumulado: valor, // O pote começa com a entrada dele
+        participantesAtivos: 1, 
+        premioAcumulado: valorFinal, 
         dataCriacao: new Date().toISOString(),
         status: 'aberta'
       });
@@ -75,11 +83,11 @@ export default function CriarLiga() {
   };
 
   const compartilharWhatsApp = () => {
-    const texto = `Fala galera! Criei nosso bolão oficial: *${nomeLiga}* 🏆\n\nA cota é de R$ ${valor},00 com Pix automático pro vencedor.\n\nBaixe o app e entre com o meu código: *${codigoGerado}*\n👉 https://bolaobrasil.app.br`;
+    const valorExibido = isCustom ? customValue : valor;
+    const texto = `Fala galera! Criei nosso bolão oficial: *${nomeLiga}* 🏆\n\nA cota é de R$ ${valorExibido},00 com Pix automático pro vencedor.\n\nBaixe o app e entre com o meu código: *${codigoGerado}*\n👉 https://bolaobrasil.app.br`;
     window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
   };
 
-  // TELA DE SUCESSO (Aparece após salvar no banco)
   if (codigoGerado) {
     return (
       <div className="p-4 space-y-6 max-w-md mx-auto pb-24 min-h-screen flex flex-col justify-center items-center">
@@ -119,7 +127,6 @@ export default function CriarLiga() {
     );
   }
 
-  // TELA DE CRIAÇÃO (Formulário)
   return (
     <div className="p-4 space-y-6 max-w-md mx-auto pb-24 bg-gray-50 min-h-screen">
       <Helmet><title>Criar Liga | Bolão Brasil</title></Helmet>
@@ -136,7 +143,6 @@ export default function CriarLiga() {
 
       <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-6">
         
-        {/* Nome da Liga */}
         <div className="space-y-2">
           <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1">
             <Trophy size={12} /> Nome do seu Bolão
@@ -150,7 +156,6 @@ export default function CriarLiga() {
           />
         </div>
 
-        {/* Tipo de Liga */}
         <div className="space-y-2">
           <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1">
             <ShieldCheck size={12} /> Privacidade
@@ -173,22 +178,40 @@ export default function CriarLiga() {
           </div>
         </div>
 
-        {/* Valor da Cota */}
         <div className="space-y-2">
           <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1">
-            <DollarSign size={12} /> Valor da Entrada (Cota por pessoa)
+            <Coins size={12} /> Valor da Entrada (Cota por pessoa)
           </label>
           <div className="grid grid-cols-3 gap-2">
-            {[10, 20, 50].map((v) => (
+            {[1, 10, 20, 50].map((v) => (
               <button 
                 key={v}
-                onClick={() => setValor(v)}
-                className={`py-3 rounded-xl text-sm font-black border-2 transition-all ${valor === v ? 'border-brazil-green bg-brazil-green/10 text-brazil-green' : 'border-gray-100 bg-gray-50 text-gray-400'}`}
+                onClick={() => { setValor(v); setIsCustom(false); }}
+                className={`py-3 rounded-xl text-sm font-black border-2 transition-all ${(!isCustom && valor === v) ? 'border-brazil-green bg-brazil-green/10 text-brazil-green' : 'border-gray-100 bg-gray-50 text-gray-400'}`}
               >
                 R$ {v}
               </button>
             ))}
+            <button 
+                onClick={() => setIsCustom(true)}
+                className={`py-3 rounded-xl text-sm font-black border-2 transition-all ${isCustom ? 'border-brazil-green bg-brazil-green/10 text-brazil-green' : 'border-gray-100 bg-gray-50 text-gray-400'}`}
+              >
+                Outro
+            </button>
           </div>
+
+          {isCustom && (
+            <div className="mt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+              <input 
+                type="number"
+                placeholder="Digite o valor (ex: 5)"
+                value={customValue}
+                onChange={(e) => setCustomValue(e.target.value)}
+                className="w-full bg-brazil-green/5 border border-brazil-green/30 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-brazil-green font-black text-brazil-green"
+              />
+            </div>
+          )}
+
           <p className="text-[9px] text-gray-400 font-medium text-center mt-2">10% do pote é retido para manutenção da plataforma via Efí Bank.</p>
         </div>
 
