@@ -6,18 +6,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const apiKey = process.env.RAPIDAPI_KEY;
 
   if (!apiKey) {
-    return res.status(500).json({ error: 'Chave RAPIDAPI_KEY não configurada na Vercel.' });
+    return res.status(500).json({ error: 'Falta a RAPIDAPI_KEY na Vercel.' });
   }
 
-  // Calculamos a data de hoje e de daqui a 10 dias no formato YYYY-MM-DD
-  const hoje = new Date();
-  const futuro = new Date();
-  futuro.setDate(hoje.getDate() + 10);
-
-  const formatData = (d: Date) => d.toISOString().split('T')[0];
-
-  // URL mudada para buscar por PERÍODO (Brasileirão Série A - ID 71)
-  const url = `https://api-football-v1.p.rapidapi.com/v3/fixtures?league=71&season=2026&from=${formatData(hoje)}&to=${formatData(futuro)}`;
+  // ESTRATÉGIA AGRESSIVA: Pede os próximos 20 jogos da Liga 71 (Brasileirão Série A)
+  // Removemos o filtro de "season" para a API não se perder.
+  const url = `https://api-football-v1.p.rapidapi.com/v3/fixtures?league=71&next=20`;
   const host = 'api-football-v1.p.rapidapi.com';
 
   try {
@@ -31,31 +25,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const data: any = await response.json();
 
+    // Erro de autenticação ou limite
     if (data.errors && Object.keys(data.errors).length > 0) {
-      return res.status(401).json({ error: 'Chave Recusada', detalhe: JSON.stringify(data.errors) });
-    }
-
-    if (!data.response || data.response.length === 0) {
-      return res.status(400).json({ 
-        error: 'Tabela Vazia', 
-        detalhe: `A API não encontrou jogos do Brasileirão entre ${formatData(hoje)} e ${formatData(futuro)}.` 
+      return res.status(401).json({ 
+        error: 'API Recusou o Acesso', 
+        detalhe: JSON.stringify(data.errors) 
       });
     }
 
-    const jogosFormatados = data.response.map((jogo: any) => {
-      const dataLocal = new Date(jogo.fixture.date);
+    // Se a lista vier vazia
+    if (!data.response || data.response.length === 0) {
+      return res.status(404).json({ 
+        error: 'Jogos não encontrados', 
+        detalhe: 'A API não retornou os próximos jogos. Verifique se a rodada 11 já foi processada no sistema deles.' 
+      });
+    }
+
+    // Mapeia os jogos para o formato do seu Banco de Dados
+    const jogosFormatados = data.response.map((item: any) => {
+      const dataLocal = new Date(item.fixture.date);
+      
+      // Formata data e hora para o padrão Brasil (GMT-3)
       const dia = String(dataLocal.getDate()).padStart(2, '0');
       const mes = String(dataLocal.getMonth() + 1).padStart(2, '0');
       const horas = String(dataLocal.getHours()).padStart(2, '0');
       const minutos = String(dataLocal.getMinutes()).padStart(2, '0');
-      const numeroRodada = jogo.league.round.replace(/[^0-9]/g, '') || '1';
+      
+      // Limpa o texto da rodada (Ex: "Regular Season - 11" vira 11)
+      const numeroRodada = item.league.round.replace(/[^0-9]/g, '') || '11';
 
       return {
-        home: jogo.teams.home.name,
-        away: jogo.teams.away.name,
+        home: item.teams.home.name,
+        away: item.teams.away.name,
         data: `${dia}/${mes}`,
         hora: `${horas}:${minutos}`,
-        estadio: jogo.fixture.venue.name || "A Definir",
+        estadio: item.fixture.venue.name || "A Definir",
         categoria: "brasileirao",
         rodada: Number(numeroRodada)
       };
@@ -64,6 +68,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json(jogosFormatados);
 
   } catch (error: any) {
-    return res.status(500).json({ error: 'Erro no servidor', detalhe: error.message });
+    return res.status(500).json({ error: 'Erro interno', detalhe: error.message });
   }
 }
