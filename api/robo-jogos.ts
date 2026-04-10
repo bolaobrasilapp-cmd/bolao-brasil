@@ -9,9 +9,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Falta a RAPIDAPI_KEY na Vercel.' });
   }
 
-  // ESTRATÉGIA AGRESSIVA: Pede os próximos 20 jogos da Liga 71 (Brasileirão Série A)
-  // Removemos o filtro de "season" para a API não se perder.
-  const url = `https://api-football-v1.p.rapidapi.com/v3/fixtures?league=71&next=20`;
+  /**
+   * EXPLICAÇÃO PARA O DIEGO:
+   * league=71 é o ID oficial do Brasileirão Série A.
+   * season=2026 é o ano atual.
+   * Buscamos a tabela COMPLETA para não ter erro de filtro.
+   */
+  const url = `https://api-football-v1.p.rapidapi.com/v3/fixtures?league=71&season=2026`;
   const host = 'api-football-v1.p.rapidapi.com';
 
   try {
@@ -25,34 +29,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const data: any = await response.json();
 
-    // Erro de autenticação ou limite
+    // 1. Verificação de Chave/Segurança
     if (data.errors && Object.keys(data.errors).length > 0) {
       return res.status(401).json({ 
-        error: 'API Recusou o Acesso', 
+        error: 'Chave RapidAPI recusada', 
         detalhe: JSON.stringify(data.errors) 
       });
     }
 
-    // Se a lista vier vazia
+    // 2. Verificação de Dados
     if (!data.response || data.response.length === 0) {
       return res.status(404).json({ 
-        error: 'Jogos não encontrados', 
-        detalhe: 'A API não retornou os próximos jogos. Verifique se a rodada 11 já foi processada no sistema deles.' 
+        error: 'Tabela não encontrada', 
+        detalhe: 'A API ainda não liberou os dados de 2026 para a liga 71. Tente novamente em instantes.' 
       });
     }
 
-    // Mapeia os jogos para o formato do seu Banco de Dados
-    const jogosFormatados = data.response.map((item: any) => {
+    // 3. O FILTRO INTELIGENTE
+    // Pegamos o horário de AGORA (em segundos)
+    const agora = Math.floor(Date.now() / 1000);
+
+    // Filtramos apenas jogos que o status seja "NS" (Not Started - Não começou)
+    // E que o horário seja maior que agora.
+    const proximos = data.response
+      .filter((item: any) => item.fixture.status.short === 'NS' && item.fixture.timestamp > agora)
+      .sort((a: any, b: any) => a.fixture.timestamp - b.fixture.timestamp) // Do mais perto para o mais longe
+      .slice(0, 10); // Pega os 10 primeiros da fila
+
+    if (proximos.length === 0) {
+      return res.status(404).json({ 
+        error: 'Sem jogos pendentes', 
+        detalhe: 'A API diz que todos os jogos de 2026 já aconteceram ou não há mais jogos marcados.' 
+      });
+    }
+
+    // 4. FORMATAÇÃO PARA O BOLAOBRASIL
+    const jogosFormatados = proximos.map((item: any) => {
       const dataLocal = new Date(item.fixture.date);
       
-      // Formata data e hora para o padrão Brasil (GMT-3)
       const dia = String(dataLocal.getDate()).padStart(2, '0');
       const mes = String(dataLocal.getMonth() + 1).padStart(2, '0');
       const horas = String(dataLocal.getHours()).padStart(2, '0');
       const minutos = String(dataLocal.getMinutes()).padStart(2, '0');
       
-      // Limpa o texto da rodada (Ex: "Regular Season - 11" vira 11)
-      const numeroRodada = item.league.round.replace(/[^0-9]/g, '') || '11';
+      const numeroRodada = item.league.round.replace(/[^0-9]/g, '') || '1';
 
       return {
         home: item.teams.home.name,
@@ -68,6 +88,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json(jogosFormatados);
 
   } catch (error: any) {
-    return res.status(500).json({ error: 'Erro interno', detalhe: error.message });
+    return res.status(500).json({ error: 'Erro de conexão', detalhe: error.message });
   }
 }
