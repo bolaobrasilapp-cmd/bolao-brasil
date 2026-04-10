@@ -18,7 +18,6 @@ const Calendario = lazy(() => import('./pages/Calendario'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Indique = lazy(() => import('./pages/Indique'));
 const CaixaMisteriosa = lazy(() => import('./pages/CaixaMisteriosa'));
-const Configuracoes = lazy(() => import('./pages/Configuracoes')); // NOVO
 const Ajuda = lazy(() => import('./pages/Ajuda')); // NOVO
 
 export default function App() {
@@ -46,7 +45,6 @@ export default function App() {
                 <Route path="indique" element={<Indique />} />
                 <Route path="caixa-misteriosa" element={<CaixaMisteriosa />} />
                 <Route path="legal/:pagina" element={<Legal />} />
-                <Route path="configuracoes" element={<Configuracoes />} /> {/* NOVO */}
                 <Route path="ajuda" element={<Ajuda />} /> {/* NOVO */}
               </Route>
             </Routes>
