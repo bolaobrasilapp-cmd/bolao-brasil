@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { UserCircle2, Key, ShieldCheck, LogOut, Calendar, Fingerprint, AlertCircle, Gift, Coins, ArrowLeft } from 'lucide-react';
+import { UserCircle2, Key, ShieldCheck, LogOut, Calendar, Fingerprint, AlertCircle, Gift, Coins, ArrowLeft, Trophy, Receipt } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Perfil() {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  // Como usamos Google Login, se tiver nome na conta, puxamos ele
   const [nome, setNome] = useState(user?.nome || '');
   const [dataNascimento, setDataNascimento] = useState('');
   const [cpf, setCpf] = useState('');
@@ -19,10 +18,30 @@ export default function Perfil() {
     return localStorage.getItem('@BolaoBrasil:pixKey') || '';
   });
   const [erro, setErro] = useState('');
+  
+  // ESTADO NOVO: Para guardar os prêmios do usuário
+  const [premios, setPremios] = useState<any[]>([]);
 
   useEffect(() => {
     localStorage.setItem('@BolaoBrasil:pixKey', pixKey);
   }, [pixKey]);
+
+  // EFEITO NOVO: Busca os repasses (prêmios) deste usuário específico
+  useEffect(() => {
+    const fetchPremios = async () => {
+      if (!user?.uid) return;
+      try {
+        const q = query(collection(db, 'repasses'), where('uid', '==', user.uid));
+        const snapshot = await getDocs(q);
+        const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Ordena para os mais recentes aparecerem primeiro (opcional)
+        setPremios(lista);
+      } catch (error) {
+        console.error("Erro ao buscar prêmios:", error);
+      }
+    };
+    fetchPremios();
+  }, [user]);
 
   const aplicarMascaraData = (valor: string) => {
     return valor
@@ -60,7 +79,6 @@ export default function Perfil() {
     }
 
     try {
-      // Correção: Como agora usamos Google, o ID oficial no banco é o UID do Firebase
       if (!user?.uid) {
         setErro('Você precisa fazer Login antes de salvar os dados.');
         return;
@@ -74,7 +92,7 @@ export default function Perfil() {
         uid: user.uid,
         email: user.email,
         dataCadastro: new Date().toISOString()
-      }, { merge: true }); // Merge true evita apagar o saldo/pontos que já existem
+      }, { merge: true }); 
 
       alert('Dados salvos na nuvem com sucesso! O Admin já pode ver sua Chave Pix.');
     } catch (error) {
@@ -89,9 +107,7 @@ export default function Perfil() {
         <title>Meu Perfil | Bolão Brasil</title>
       </Helmet>
 
-      {/* Header do Perfil */}
       <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col items-center text-center relative overflow-hidden">
-        {/* Mostra a foto do Google se houver, ou o ícone padrão */}
         {user?.foto ? (
           <img src={user.foto} alt="Perfil" className="w-20 h-20 rounded-full mb-3 border-4 border-brazil-green/20" />
         ) : (
@@ -106,7 +122,42 @@ export default function Perfil() {
         <p className="text-sm text-gray-500">{user?.email || "Cadastro Pendente"}</p>
       </div>
 
-      {/* Formulário de Dados Obrigatórios (Compliance) */}
+      {/* --- SESSÃO NOVA: MEUS PRÊMIOS E COMPROVANTES --- */}
+      {premios.length > 0 && (
+        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-4">
+          <div className="flex items-center gap-2 mb-2 border-b border-gray-50 pb-3">
+            <Trophy className="text-brazil-yellow" size={20} />
+            <h3 className="font-black text-gray-800 text-sm uppercase tracking-wide">Meus Prêmios e Saques</h3>
+          </div>
+
+          <div className="space-y-3">
+            {premios.map((premio) => (
+              <div key={premio.id} className="bg-gray-50 rounded-xl p-4 border border-gray-200 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{premio.liga}</p>
+                  <p className="text-lg font-black text-brazil-green">R$ {premio.valor?.toFixed(2).replace('.', ',')}</p>
+                </div>
+                
+                <div>
+                  {premio.status === 'PAGO' && premio.comprovanteUrl ? (
+                    <button 
+                      onClick={() => window.open(premio.comprovanteUrl, '_blank')}
+                      className="flex items-center gap-1.5 bg-brazil-green text-white px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-sm hover:bg-green-600 transition-colors"
+                    >
+                      <Receipt size={14} /> Ver Pix
+                    </button>
+                  ) : (
+                    <span className="bg-brazil-yellow/20 text-brazil-yellow px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider border border-brazil-yellow/30">
+                      Na Fila
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-4">
         <div className="flex items-center gap-2 mb-2">
           <ShieldCheck className="text-brazil-green" size={20} />
@@ -187,7 +238,6 @@ export default function Perfil() {
         </button>
       </div>
 
-      {/* --- MENU DE RECOMPENSAS NO PERFIL --- */}
       <div className="grid grid-cols-1 gap-3">
         <div 
           onClick={() => navigate('/caixa-misteriosa')}
@@ -222,7 +272,6 @@ export default function Perfil() {
         </div>
       </div>
 
-      {/* Menu Secundário */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
         <button 
           onClick={() => alert('Configurações estarão disponíveis na próxima atualização.')}
