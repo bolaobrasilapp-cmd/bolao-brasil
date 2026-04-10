@@ -40,8 +40,9 @@ const getEscudoLocal = (nome: string) => {
   if (n.includes('paulo') || n === 'sao' || n === 'spo') return '/escudos/São Paulo.png';
   if (n.includes('vasco') || n === 'vas') return '/escudos/Vasco da Gama.png';
   if (n.includes('vitoria') || n.includes('vitória') || n === 'vit') return '/escudos/Vitoria.png';
+  if (n.includes('remo') || n === 'rem') return '/escudos/Remo.png';
 
-  return null; // Se for um time que não tem PNG, ele devolve nulo para usar a imagem da API ou o escudo cinza
+  return null; 
 };
 
 export default function Palpites() {
