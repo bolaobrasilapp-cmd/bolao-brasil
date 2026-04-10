@@ -6,13 +6,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const apiKey = process.env.RAPIDAPI_KEY;
   if (!apiKey) return res.status(500).json({ error: 'Falta a RAPIDAPI_KEY na Vercel.' });
 
-  // CONFIGURAÇÃO PARA A "FREE API LIVE FOOTBALL DATA" (Smart API)
+  // HOST exato do seu print das 11:39
   const host = 'free-api-live-football-data.p.rapidapi.com';
-  const leagueId = '13'; // ID oficial do Brasileirão Série A nesta API
 
   try {
-    // Buscamos todos os jogos da liga para filtrar os próximos
-    const url = `https://${host}/football-get-all-fixtures-by-league?leagueId=${leagueId}`;
+    // TENTATIVA 1: Buscar jogos da liga 13 (Brasileirão nesta API)
+    const url = `https://${host}/football-get-all-fixtures-by-league?leagueId=13`;
     
     const response = await fetch(url, {
       method: 'GET',
@@ -24,41 +23,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const data: any = await response.json();
 
-    if (!data.status || !data.response || !data.response.fixtures) {
-      return res.status(404).json({ 
-        error: 'Jogos não encontrados', 
-        detalhe: 'A API não retornou a lista de jogos. Verifique se a assinatura está ativa.' 
+    // Se a API responder com erro de assinatura ou mensagem de erro
+    if (data.status === false || data.message) {
+      return res.status(401).json({ 
+        error: 'Erro na API', 
+        detalhe: data.message || 'Acesso negado ou liga não encontrada.' 
       });
     }
 
-    // Pegamos o horário de agora
+    const fixtures = data.response?.fixtures || [];
+
+    if (fixtures.length === 0) {
+      return res.status(404).json({ 
+        error: 'Lista Vazia', 
+        detalhe: 'A API não encontrou jogos para a liga 13. Verifique se o campeonato está ativo hoje.' 
+      });
+    }
+
     const agora = new Date();
 
-    // Filtramos apenas os jogos que ainda vão acontecer
-    const proximos = data.response.fixtures
-      .filter((j: any) => {
-        // Tenta converter a data da API (formato DD-MM-YYYY)
+    // Filtra jogos futuros, ordena e pega os 10 primeiros
+    const proximos = fixtures
+      .map((j: any) => {
+        // Converte data DD-MM-YYYY para objeto Date
         const [dia, mes, ano] = j.date.split('-');
-        const dataJogo = new Date(`${ano}-${mes}-${dia}T${j.time}:00`);
-        return dataJogo > agora;
+        return { ...j, dataISO: new Date(`${ano}-${mes}-${dia}T${j.time}:00`) };
       })
-      .slice(0, 10); // Pega os 10 primeiros da fila
+      .filter((j: any) => j.dataISO > agora)
+      .sort((a: any, b: any) => a.dataISO.getTime() - b.dataISO.getTime())
+      .slice(0, 10);
 
-    const formatados = proximos.map((j: any) => {
-      return {
-        home: j.home_team,
-        away: j.away_team,
-        data: j.date.substring(0, 5).replace('-', '/'), // Vira DD/MM
-        hora: j.time,
-        estadio: j.stadium || "A Definir",
-        categoria: "brasileirao",
-        rodada: Number(j.round) || 11
-      };
-    });
+    const final = proximos.map((j: any) => ({
+      home: j.home_team,
+      away: j.away_team,
+      data: j.date.substring(0, 5).replace('-', '/'),
+      hora: j.time,
+      estadio: j.stadium || "A Definir",
+      categoria: "brasileirao",
+      rodada: Number(j.round) || 11
+    }));
 
-    return res.status(200).json(formatados);
+    return res.status(200).json(final);
 
   } catch (error: any) {
-    return res.status(500).json({ error: 'Erro de conexão', detalhe: error.message });
+    return res.status(500).json({ error: 'Erro técnico', detalhe: error.message });
   }
 }
