@@ -5,7 +5,6 @@ import { db, auth } from '../lib/firebase';
 import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
 import { Trophy, ArrowLeft, ShieldCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
 
-// 1. ADICIONADO: logoHome e logoAway na interface para o frontend reconhecer a imagem
 interface Jogo {
   id: string;
   home: string;
@@ -16,6 +15,34 @@ interface Jogo {
   hora?: string;
   estadio?: string;
 }
+
+// O CÉREBRO DAS IMAGENS: Traduz o nome do banco para o arquivo exato da sua pasta
+const getEscudoLocal = (nome: string) => {
+  if (!nome) return null;
+  const n = nome.toLowerCase();
+
+  if (n.includes('athletico') || n === 'cap') return '/escudos/Athletico Paranaense.png';
+  if (n.includes('atlético-mg') || n.includes('atletico') || n === 'cam') return '/escudos/Atlético Mineiro.png';
+  if (n.includes('bahia') || n === 'bah') return '/escudos/Bahia.png';
+  if (n.includes('botafogo') || n === 'bot') return '/escudos/Botafogo.png';
+  if (n.includes('chape') || n === 'cha') return '/escudos/Chapecoense.png';
+  if (n.includes('corinthians') || n === 'cor') return '/escudos/Corinthians.png';
+  if (n.includes('coritiba') || n === 'cfc') return '/escudos/Coritiba.png';
+  if (n.includes('cruzeiro') || n === 'cru') return '/escudos/Cruzeiro.png';
+  if (n.includes('flamengo') || n === 'fla') return '/escudos/Flamengo.png';
+  if (n.includes('fluminense') || n === 'flu') return '/escudos/Fluminense.png';
+  if (n.includes('gremio') || n.includes('grêmio') || n === 'gre') return '/escudos/Gremio.png';
+  if (n.includes('internacional') || n.includes('inter') || n === 'int') return '/escudos/Internacional.png';
+  if (n.includes('mirassol') || n === 'mir') return '/escudos/Mirassol-SP.png';
+  if (n.includes('palmeiras') || n === 'pal') return '/escudos/Palmeiras.png';
+  if (n.includes('bragantino') || n.includes('red bull') || n === 'rbb') return '/escudos/Red Bull Bragantino.png';
+  if (n.includes('santos') || n === 'san') return '/escudos/Santos.png';
+  if (n.includes('paulo') || n === 'sao' || n === 'spo') return '/escudos/São Paulo.png';
+  if (n.includes('vasco') || n === 'vas') return '/escudos/Vasco da Gama.png';
+  if (n.includes('vitoria') || n.includes('vitória') || n === 'vit') return '/escudos/Vitoria.png';
+
+  return null; // Se for um time que não tem PNG, ele devolve nulo para usar a imagem da API ou o escudo cinza
+};
 
 export default function Palpites() {
   const navigate = useNavigate();
@@ -146,60 +173,68 @@ export default function Palpites() {
             </p>
           </div>
 
-          {jogos.map((jogo) => (
-            <div key={jogo.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brazil-green to-brazil-yellow"></div>
-              
-              <div className="text-center mb-4 mt-1">
-                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{jogo.data || 'Data a definir'} • {jogo.hora || '16:00'}</p>
-                <p className="text-[10px] text-gray-500 mt-0.5">{jogo.estadio || 'Estádio a definir'}</p>
+          {jogos.map((jogo) => {
+            // Aplica a lógica: Tenta puxar a sua imagem local PRIMEIRO. 
+            // Se não tiver, tenta a da API. Se não tiver nenhuma, usa null (escudo cinza).
+            const escudoCasa = getEscudoLocal(jogo.home) || jogo.logoHome;
+            const escudoVisitante = getEscudoLocal(jogo.away) || jogo.logoAway;
+
+            return (
+              <div key={jogo.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brazil-green to-brazil-yellow"></div>
+                
+                <div className="text-center mb-4 mt-1">
+                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{jogo.data || 'Data a definir'} • {jogo.hora || '16:00'}</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">{jogo.estadio || 'Estádio a definir'}</p>
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  
+                  {/* Time Casa */}
+                  <div className="flex flex-col items-center flex-1 gap-2">
+                    {escudoCasa ? (
+                      <img src={escudoCasa} alt={jogo.home} className="w-10 h-10 object-contain drop-shadow-sm" />
+                    ) : (
+                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center border border-gray-200">
+                        <ShieldCheck size={20} className="text-gray-300" />
+                      </div>
+                    )}
+                    <span className="font-bold text-sm text-gray-800 text-center uppercase truncate w-full">{jogo.home}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl border border-gray-200">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={palpites[jogo.id]?.home || ''}
+                      onChange={(e) => handleScoreChange(jogo.id, 'home', e.target.value)}
+                      className="w-10 h-10 bg-white border border-gray-300 rounded-lg text-center font-black text-lg focus:border-brazil-blue focus:ring-2 focus:ring-brazil-blue/20 outline-none transition-all"
+                    />
+                    <span className="text-gray-400 font-black text-sm">X</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={palpites[jogo.id]?.away || ''}
+                      onChange={(e) => handleScoreChange(jogo.id, 'away', e.target.value)}
+                      className="w-10 h-10 bg-white border border-gray-300 rounded-lg text-center font-black text-lg focus:border-brazil-blue focus:ring-2 focus:ring-brazil-blue/20 outline-none transition-all"
+                    />
+                  </div>
+
+                  {/* Time Visitante */}
+                  <div className="flex flex-col items-center flex-1 gap-2">
+                    {escudoVisitante ? (
+                      <img src={escudoVisitante} alt={jogo.away} className="w-10 h-10 object-contain drop-shadow-sm" />
+                    ) : (
+                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center border border-gray-200">
+                        <ShieldCheck size={20} className="text-gray-300" />
+                      </div>
+                    )}
+                    <span className="font-bold text-sm text-gray-800 text-center uppercase truncate w-full">{jogo.away}</span>
+                  </div>
+                </div>
               </div>
-
-              <div className="flex items-center justify-between gap-4">
-                {/* 2. ADICIONADO: Escudo do Time Casa */}
-                <div className="flex flex-col items-center flex-1 gap-2">
-                  {jogo.logoHome ? (
-                    <img src={jogo.logoHome} alt={jogo.home} className="w-10 h-10 object-contain drop-shadow-sm" />
-                  ) : (
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center border border-gray-200">
-                      <ShieldCheck size={20} className="text-gray-300" />
-                    </div>
-                  )}
-                  <span className="font-bold text-sm text-gray-800 text-center uppercase truncate w-full">{jogo.home}</span>
-                </div>
-
-                <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl border border-gray-200">
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={palpites[jogo.id]?.home || ''}
-                    onChange={(e) => handleScoreChange(jogo.id, 'home', e.target.value)}
-                    className="w-10 h-10 bg-white border border-gray-300 rounded-lg text-center font-black text-lg focus:border-brazil-blue focus:ring-2 focus:ring-brazil-blue/20 outline-none transition-all"
-                  />
-                  <span className="text-gray-400 font-black text-sm">X</span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={palpites[jogo.id]?.away || ''}
-                    onChange={(e) => handleScoreChange(jogo.id, 'away', e.target.value)}
-                    className="w-10 h-10 bg-white border border-gray-300 rounded-lg text-center font-black text-lg focus:border-brazil-blue focus:ring-2 focus:ring-brazil-blue/20 outline-none transition-all"
-                  />
-                </div>
-
-                {/* 3. ADICIONADO: Escudo do Time Visitante */}
-                <div className="flex flex-col items-center flex-1 gap-2">
-                  {jogo.logoAway ? (
-                    <img src={jogo.logoAway} alt={jogo.away} className="w-10 h-10 object-contain drop-shadow-sm" />
-                  ) : (
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center border border-gray-200">
-                      <ShieldCheck size={20} className="text-gray-300" />
-                    </div>
-                  )}
-                  <span className="font-bold text-sm text-gray-800 text-center uppercase truncate w-full">{jogo.away}</span>
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
 
           <button 
             onClick={handleSalvarPalpites}
