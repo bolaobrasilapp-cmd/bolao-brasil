@@ -12,7 +12,6 @@ interface Repasse {
   chavePix: string;
   status: 'PENDENTE' | 'PAGO';
   comprovanteUrl?: string;
-  uid?: string;
 }
 
 export default function Admin() {
@@ -65,8 +64,9 @@ export default function Admin() {
     }
   };
 
+  // FUNÇÃO DO WEBHOOK (CORRIGIDA FORA DE OUTRAS FUNÇÕES)
   const ativarWebhookEfi = async () => {
-    if(!confirm("Deseja ativar a escuta de Pix agora no seu domínio?")) return;
+    if(!confirm("Deseja ativar a escuta de Pix agora?")) return;
     setLoadingWebhook(true);
     try {
       const res = await fetch('/api/configurar-webhook', { method: 'POST' });
@@ -74,7 +74,7 @@ export default function Admin() {
       if (data.sucesso) alert("🚀 SUCESSO! A Efí agora está conectada ao Bolão Brasil.");
       else alert("❌ Erro: " + JSON.stringify(data.erro));
     } catch (e) {
-      alert("Erro na rede ao conectar com a API.");
+      alert("Erro na rede ao conectar com a API. Verifique se o arquivo api/configurar-webhook.ts existe e está rodando.");
     } finally {
       setLoadingWebhook(false);
     }
@@ -100,7 +100,7 @@ export default function Admin() {
       });
 
       await batch.commit();
-      alert(`✅ SUCESSO! ${data.length} jogos importados/atualizados.`);
+      alert(`✅ SUCESSO! ${data.length} jogos importados.`);
     } catch (error: any) {
       setDebugErro(`Falha de rede: ${error.message}`);
     } finally {
@@ -146,11 +146,6 @@ export default function Admin() {
         return;
       }
 
-      if (data.length === 0) {
-        alert('Nenhum jogo com placar oficial encontrado no momento.');
-        return;
-      }
-
       const batch = writeBatch(db);
       data.forEach((resultado: any) => {
         const idUnico = `${resultado.home}_${resultado.away}_R${resultado.rodada}`.replace(/[^a-zA-Z0-9]/g, '');
@@ -163,9 +158,9 @@ export default function Admin() {
       });
 
       await batch.commit();
-      alert(`✅ SUCESSO! Placares de ${data.length} jogos atualizados.`);
+      alert(`✅ Resultados atualizados com sucesso!`);
     } catch (error: any) {
-      setDebugErro(`Falha de rede: ${error.message}`);
+      setDebugErro(`Erro: ${error.message}`);
     } finally {
       setLoadingResultados(false);
     }
@@ -185,20 +180,16 @@ export default function Admin() {
   const confirmarPagamento = async (repasseId: string) => {
     const comprovante = comprovantesBase64[repasseId];
     if (!comprovante) {
-      alert("Anexe o comprovante antes de confirmar!");
+      alert("Anexe o comprovante antes!");
       return;
     }
     try {
       const ref = doc(db, 'repasses', repasseId);
-      await updateDoc(ref, { 
-        status: 'PAGO', 
-        comprovanteUrl: comprovante 
-      });
-      
+      await updateDoc(ref, { status: 'PAGO', comprovanteUrl: comprovante });
       setRepasses(prev => prev.map(r => r.id === repasseId ? { ...r, status: 'PAGO', comprovanteUrl: comprovante } : r));
-      alert("✅ Pagamento confirmado e salvo!");
+      alert("✅ Pagamento confirmado!");
     } catch (error) {
-      alert("Erro ao salvar no banco.");
+      alert("Erro ao salvar.");
     }
   };
 
@@ -268,11 +259,6 @@ export default function Admin() {
               <h4 className="font-black text-sm uppercase mb-4 flex items-center gap-2 text-white">
                 <DatabaseZap size={18} className="text-brazil-green" /> Automação Smart API
               </h4>
-              {debugErro && (
-                <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-xl mb-4 text-left">
-                  <p className="text-red-400 text-[10px] font-mono break-all">{debugErro}</p>
-                </div>
-              )}
               <button onClick={puxarJogosDaAPI} disabled={loadingIA} className="w-full bg-brazil-green py-4 rounded-xl font-black uppercase text-xs text-gray-900 flex items-center justify-center gap-2">
                 {loadingIA ? "Sincronizando..." : <><RefreshCw size={18} /> Puxar Próxima Rodada</>}
               </button>
@@ -282,14 +268,7 @@ export default function Admin() {
               <h4 className="text-xs font-bold uppercase mb-4 text-purple-400 flex items-center gap-2">
                 <Sparkles size={16} /> Motor Gemini IA (Backup Manual)
               </h4>
-              <div className="flex gap-2 mb-3">
-                <input type="number" value={rodadaIA} onChange={(e) => setRodadaIA(e.target.value)} placeholder="Rodada" className="w-1/4 bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500" />
-                <select value={categoriaIA} onChange={(e: any) => setCategoriaIA(e.target.value)} className="w-3/4 bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500">
-                  <option value="brasileirao">Brasileirão Série A</option>
-                  <option value="copa">Copa do Brasil</option>
-                </select>
-              </div>
-              <textarea value={textoIA} onChange={(e) => setTextoIA(e.target.value)} placeholder="Cole o texto bruto dos jogos aqui..." className="w-full h-32 bg-gray-900 border border-gray-700 rounded-xl p-4 text-xs mb-4 text-white outline-none focus:border-purple-500" />
+              <textarea value={textoIA} onChange={(e) => setTextoIA(e.target.value)} placeholder="Cole o texto bruto aqui..." className="w-full h-32 bg-gray-900 border border-gray-700 rounded-xl p-4 text-xs mb-4 text-white outline-none focus:border-purple-500" />
               <button onClick={processarJogosComIA} disabled={loadingIA} className="w-full bg-purple-600 py-3 rounded-xl font-black text-xs uppercase text-white hover:bg-purple-500 transition-all">
                 Forçar Importação Manual
               </button>
@@ -301,8 +280,7 @@ export default function Admin() {
           <div className="bg-gray-800 rounded-2xl p-5 border border-brazil-yellow/30 text-center shadow-lg">
              <Trophy size={40} className="text-brazil-yellow mx-auto mb-4" />
              <h3 className="font-black text-lg text-white mb-2">Apuração de Placares</h3>
-             <p className="text-xs text-gray-400 mb-6">Puxe os placares reais da rodada em tempo real da API Cartola.</p>
-             <button onClick={apurarResultados} disabled={loadingResultados} className="w-full bg-brazil-yellow text-gray-900 font-black py-4 rounded-xl text-xs uppercase shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
+             <button onClick={apurarResultados} disabled={loadingResultados} className="w-full bg-brazil-yellow text-gray-900 font-black py-4 rounded-xl text-xs uppercase shadow-lg flex items-center justify-center gap-2">
                 {loadingResultados ? "Buscando..." : <><RefreshCw size={18} /> Sincronizar Resultados Oficiais</>}
              </button>
           </div>
@@ -312,16 +290,13 @@ export default function Admin() {
           <div className="space-y-4">
             <div className="relative">
               <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-              <input type="text" placeholder="Buscar usuário ou liga..." className="w-full bg-gray-800 border border-gray-700 p-4 pl-12 rounded-xl text-sm text-white outline-none focus:border-brazil-green" />
+              <input type="text" placeholder="Buscar usuário..." className="w-full bg-gray-800 border border-gray-700 p-4 pl-12 rounded-xl text-sm text-white outline-none" />
             </div>
 
             {loadingRepasses ? (
               <p className="text-center text-gray-500 py-10 font-bold text-xs uppercase tracking-widest">Acessando Firebase...</p>
             ) : repasses.length === 0 ? (
-              <div className="text-center py-10 border border-dashed border-gray-700 rounded-2xl">
-                <CheckCircle size={32} className="text-gray-600 mx-auto mb-3" />
-                <p className="text-gray-500 text-sm font-bold tracking-tight">Nenhum repasse pendente no momento!</p>
-              </div>
+              <p className="text-center py-10 text-gray-500 text-sm">Nenhum repasse pendente!</p>
             ) : repasses.map((rep) => (
               <div key={rep.id} className="bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden relative shadow-lg">
                 <div className={`absolute left-0 top-0 bottom-0 w-1 ${rep.status === 'PENDENTE' ? 'bg-brazil-yellow' : 'bg-brazil-green'}`}></div>
@@ -331,9 +306,6 @@ export default function Admin() {
                       <h3 className="font-black text-lg text-white">{rep.nome}</h3>
                       <p className="text-xs text-gray-400">{rep.liga}</p>
                     </div>
-                    <span className={`text-[10px] font-black px-3 py-1 rounded-md uppercase tracking-wider ${rep.status === 'PENDENTE' ? 'bg-brazil-yellow/20 text-brazil-yellow' : 'bg-brazil-green/20 text-brazil-green'}`}>
-                      {rep.status}
-                    </span>
                   </div>
                   <div className="bg-gray-900 rounded-xl p-4 flex justify-between items-center mb-4 border border-gray-800">
                     <div>
@@ -347,21 +319,16 @@ export default function Admin() {
                   </div>
                   {rep.status === 'PENDENTE' ? (
                     <div className="space-y-3">
-                      <div className="flex gap-2">
-                        <button onClick={() => { navigator.clipboard.writeText(rep.chavePix); alert("Copiado!"); }} className="flex-1 bg-gray-700 text-white py-3 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-2"><Copy size={14}/> Copiar Pix</button>
-                        <label className={`flex-1 flex justify-center items-center gap-2 py-3 rounded-xl font-bold text-[10px] uppercase cursor-pointer border border-dashed ${comprovantesBase64[rep.id] ? 'bg-brazil-blue/20 border-brazil-blue text-brazil-blue' : 'border-gray-600 text-gray-400'}`}>
-                          <UploadCloud size={14}/> {comprovantesBase64[rep.id] ? "Anexado" : "Anexar Print"}
-                          <input type="file" accept="image/*" onChange={(e) => handleUploadComprovante(e, rep.id)} className="hidden" />
-                        </label>
-                      </div>
-                      <button onClick={() => confirmarPagamento(rep.id)} className="w-full bg-brazil-green text-gray-900 py-4 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2">
-                        Confirmar Pagamento
-                      </button>
+                      <label className="w-full bg-gray-700 text-white py-3 rounded-xl font-bold text-[10px] uppercase cursor-pointer block text-center">
+                        {comprovantesBase64[rep.id] ? "Anexado" : "Anexar Print"}
+                        <input type="file" accept="image/*" onChange={(e) => handleUploadComprovante(e, rep.id)} className="hidden" />
+                      </label>
+                      <button onClick={() => confirmarPagamento(rep.id)} className="w-full bg-brazil-green text-gray-900 py-4 rounded-xl font-black text-xs uppercase">Confirmar Pagamento</button>
                     </div>
                   ) : (
-                    <div className="bg-brazil-green/10 border border-brazil-green/30 p-4 rounded-xl flex items-center gap-3">
+                    <div className="bg-brazil-green/10 p-4 rounded-xl flex items-center gap-3">
                       <CheckCircle size={24} className="text-brazil-green" />
-                      <div><p className="text-sm font-bold text-brazil-green uppercase tracking-widest">Pago</p></div>
+                      <p className="text-sm font-bold text-brazil-green uppercase">Pago</p>
                     </div>
                   )}
                 </div>
