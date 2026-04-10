@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion'; // Ajustado para framer-motion padrão
 import { UserCircle2, Key, ShieldCheck, LogOut, Calendar, Fingerprint, AlertCircle, Gift, Coins, ArrowLeft, Trophy, Receipt } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
@@ -18,15 +18,16 @@ export default function Perfil() {
     return localStorage.getItem('@BolaoBrasil:pixKey') || '';
   });
   const [erro, setErro] = useState('');
-  
-  // ESTADO NOVO: Para guardar os prêmios do usuário
   const [premios, setPremios] = useState<any[]>([]);
 
   useEffect(() => {
     localStorage.setItem('@BolaoBrasil:pixKey', pixKey);
   }, [pixKey]);
 
-  // EFEITO NOVO: Busca os repasses (prêmios) deste usuário específico
+  useEffect(() => {
+    if (user?.nome && !nome) setNome(user.nome);
+  }, [user]);
+
   useEffect(() => {
     const fetchPremios = async () => {
       if (!user?.uid) return;
@@ -34,7 +35,6 @@ export default function Perfil() {
         const q = query(collection(db, 'repasses'), where('uid', '==', user.uid));
         const snapshot = await getDocs(q);
         const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // Ordena para os mais recentes aparecerem primeiro (opcional)
         setPremios(lista);
       } catch (error) {
         console.error("Erro ao buscar prêmios:", error);
@@ -91,6 +91,7 @@ export default function Perfil() {
         pixKey: pixKey,
         uid: user.uid,
         email: user.email,
+        foto: user.foto || null,
         dataCadastro: new Date().toISOString()
       }, { merge: true }); 
 
@@ -107,9 +108,10 @@ export default function Perfil() {
         <title>Meu Perfil | Bolão Brasil</title>
       </Helmet>
 
+      {/* Cuidando da Foto do Google */}
       <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col items-center text-center relative overflow-hidden">
         {user?.foto ? (
-          <img src={user.foto} alt="Perfil" className="w-20 h-20 rounded-full mb-3 border-4 border-brazil-green/20" />
+          <img src={user.foto} alt="Perfil" className="w-20 h-20 rounded-full mb-3 border-4 border-brazil-green/20 object-cover" />
         ) : (
           <div className="w-20 h-20 bg-brazil-blue/10 rounded-full flex items-center justify-center mb-3 relative">
             <UserCircle2 size={48} className="text-brazil-blue" />
@@ -122,7 +124,6 @@ export default function Perfil() {
         <p className="text-sm text-gray-500">{user?.email || "Cadastro Pendente"}</p>
       </div>
 
-      {/* --- SESSÃO NOVA: MEUS PRÊMIOS E COMPROVANTES --- */}
       {premios.length > 0 && (
         <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-4">
           <div className="flex items-center gap-2 mb-2 border-b border-gray-50 pb-3">
@@ -238,55 +239,14 @@ export default function Perfil() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-3">
-        <div 
-          onClick={() => navigate('/caixa-misteriosa')}
-          className="bg-brazil-blue rounded-2xl p-4 border border-blue-900 flex items-center justify-between cursor-pointer shadow-md"
-        >
-          <div className="flex items-center gap-3">
-            <div className="bg-brazil-yellow p-2.5 rounded-xl">
-              <Coins size={24} className="text-brazil-blue" />
-            </div>
-            <div>
-              <h3 className="font-black text-white text-sm leading-none uppercase tracking-wide">Minha Sorte Diária</h3>
-              <p className="text-[10px] font-bold text-brazil-yellow/80 mt-1 uppercase tracking-widest">Resgate seu bônus de hoje</p>
-            </div>
-          </div>
-          <ArrowLeft size={18} className="text-white/30 rotate-180" />
-        </div>
-
-        <div 
-          onClick={() => navigate('/indique')}
-          className="bg-brazil-yellow/20 rounded-2xl p-4 border-2 border-dashed border-brazil-yellow flex items-center justify-between cursor-pointer hover:bg-brazil-yellow/30 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <Gift size={28} className="text-brazil-yellow" />
-            <div>
-              <h3 className="font-black text-brazil-blue text-sm leading-none uppercase tracking-wide">Indique e Ganhe</h3>
-              <p className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-widest">Ganhe créditos por convite</p>
-            </div>
-          </div>
-          <span className="bg-brazil-yellow text-brazil-blue text-[10px] font-black px-4 py-2.5 rounded-xl uppercase shadow-sm tracking-widest">
-            Convidar
-          </span>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+      {/* MENU FINAL SUBSTITUÍDO (Tiramos Configurações, colocamos Ajuda) */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col mt-4">
         <button 
-          onClick={() => alert('Configurações estarão disponíveis na próxima atualização.')}
-          className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors border-b border-gray-50"
-        >
-          <div className="text-brazil-green"><ShieldCheck size={18} /></div>
-          <span className="text-sm font-bold text-gray-700">Configurações da Conta</span>
-        </button>
-        
-        <button 
-          onClick={() => window.open('https://wa.me/5544999999999', '_blank')}
+          onClick={() => navigate('/ajuda')}
           className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors border-b border-gray-50"
         >
           <div className="text-brazil-blue"><AlertCircle size={18} /></div>
-          <span className="text-sm font-bold text-gray-700">Central de Ajuda (WhatsApp)</span>
+          <span className="text-sm font-bold text-gray-700">Central de Ajuda / FAQ</span>
         </button>
 
         <button 
@@ -301,7 +261,7 @@ export default function Perfil() {
         </button>
       </div>
 
-      <div className="p-4 bg-yellow-50 border border-yellow-100 rounded-xl">
+      <div className="p-4 bg-yellow-50 border border-yellow-100 rounded-xl mt-4">
         <p className="text-[10px] text-yellow-700 leading-relaxed text-center font-medium">
           Atenção: O Bolão Brasil segue as normas do Jogo Responsável. Seus dados são protegidos por criptografia e usados apenas para processamento de pagamentos via Efí Bank.
         </p>

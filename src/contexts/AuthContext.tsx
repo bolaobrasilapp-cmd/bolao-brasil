@@ -15,31 +15,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any>(null);
   const [saldo, setSaldo] = useState(0);
 
-  // 1. O Cérebro: Fica escutando 24h se o usuário está logado no Google
+  // 1. Escuta o Login do Google e traduz a foto!
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+      if (currentUser) {
+        setUser({
+          uid: currentUser.uid,
+          email: currentUser.email,
+          nome: currentUser.displayName,
+          foto: currentUser.photoURL, // <-- AQUI ESTÁ O SEGREDO DA FOTO!
+        });
+      } else {
+        setUser(null);
+      }
     });
-    return () => unsubscribeAuth(); // Limpa o monitoramento se fechar o app
+    return () => unsubscribeAuth();
   }, []);
 
-  // 2. Monitor de Saldo em Tempo Real (Agora ligado ao UID do Google)
+  // 2. Monitor de Saldo e Dados do Firebase
   useEffect(() => {
     if (user?.uid) {
-      // Puxa o saldo da ficha do usuário direto do Firebase (Pasta 'usuarios')
       const unsub = onSnapshot(doc(db, "usuarios", user.uid), (docSnap) => {
         if (docSnap.exists()) {
           const dados = docSnap.data();
           setSaldo(dados.saldo || 0);
+          // Junta a foto do Google com os dados (CPF, etc) do banco
+          setUser((prev: any) => ({ ...prev, ...dados, foto: prev?.foto || dados.foto }));
         }
       });
       return () => unsub();
     } else {
       setSaldo(0);
     }
-  }, [user]);
+  }, [user?.uid]); // Só roda se o UID mudar
 
-  // 3. Função oficial para deslogar
   const logout = async () => {
     try {
       await signOut(auth);
