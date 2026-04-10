@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { db } from '../lib/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
-import { LayoutDashboard, Trophy, DollarSign, Users, CheckCircle, AlertCircle, Search, Lock, KeyRound, Sparkles, CalendarDays } from 'lucide-react';
+import { LayoutDashboard, Trophy, DollarSign, Users, CheckCircle, AlertCircle, Search, Lock, KeyRound, Sparkles, DatabaseZap } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 
 export default function Admin() {
@@ -14,7 +14,7 @@ export default function Admin() {
   const [categoriaIA, setCategoriaIA] = useState<'brasileirao' | 'copa'>('brasileirao');
   const [loadingIA, setLoadingIA] = useState(false);
 
-  const SENHA_MASTER = 'Lara#340@123'; // Você pode mudar essa senha para qual quiser depois!
+  const SENHA_MASTER = 'Lara#340@123';
 
   const handleLogin = () => {
     if (senha === SENHA_MASTER) {
@@ -26,6 +26,49 @@ export default function Admin() {
     }
   };
 
+  // NOVA FUNÇÃO: O ROBÔ 100% AUTOMÁTICO
+  const puxarJogosDaAPI = async () => {
+    setLoadingIA(true);
+    try {
+      const response = await fetch('/api/robo-jogos');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(`Erro no Robô: ${data.detalhe || data.error}`);
+      }
+
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error("A API não retornou os próximos jogos.");
+      }
+
+      const batch = writeBatch(db);
+      
+      data.forEach((jogo: any) => {
+        const idUnico = `${jogo.home}_${jogo.away}_R${jogo.rodada}`.replace(/[^a-zA-Z0-9]/g, '');
+        const docRef = doc(collection(db, "jogos"), idUnico);
+        batch.set(docRef, {
+          home: jogo.home,
+          away: jogo.away,
+          data: jogo.data,
+          hora: jogo.hora,
+          estadio: jogo.estadio,
+          categoria: jogo.categoria,
+          rodada: jogo.rodada,
+          dataCadastro: new Date().toISOString()
+        });
+      });
+
+      await batch.commit();
+      alert(`✅ Sucesso Absoluto! ${data.length} jogos oficiais (Rodada ${data[0]?.rodada}) importados e salvos no banco!`);
+    } catch (error: any) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setLoadingIA(false);
+    }
+  };
+
+  // FUNÇÃO ANTIGA: IA MANUAL
   const processarJogosComIA = async () => {
     if (!textoIA.trim()) return alert("Cole o texto dos jogos primeiro!");
     
@@ -48,7 +91,6 @@ export default function Admin() {
         throw new Error(`Servidor da Vercel falhou (Erro ${response.status}). O deploy não concluiu ou a rota sumiu.`);
       }
 
-      // Se a IA negou, joga o erro REAL na tela
       if (!response.ok || data.error) {
         throw new Error(`Google IA recusou: ${data.detalhe || data.error || 'Erro Desconhecido'}`);
       }
@@ -82,13 +124,12 @@ export default function Admin() {
       setTextoIA('');
     } catch (error: any) {
       console.error(error);
-      alert(error.message); // Aqui ele mostra o erro exato do Google
+      alert(error.message); 
     } finally {
       setLoadingIA(false);
     }
   };
 
-  // TELA DE LOGIN DO ADMIN (O Cadeado)
   if (!autenticado) {
     return (
       <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-6 text-gray-100">
@@ -135,14 +176,12 @@ export default function Admin() {
     );
   }
 
-  // TELA DO PAINEL ADMIN (Se a senha estiver correta)
   return (
     <div className="min-h-screen bg-gray-900 pb-24 text-gray-100">
       <Helmet>
         <title>SaaS Master Admin | Bolão Brasil</title>
       </Helmet>
 
-      {/* Header Admin */}
       <div className="bg-gray-800 p-6 border-b border-gray-700 shadow-md">
         <div className="flex items-center justify-between">
           <div>
@@ -155,7 +194,6 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* Navegação Interna Admin */}
       <div className="flex overflow-x-auto bg-gray-800 border-b border-gray-700 p-2 gap-2 hide-scrollbar">
         <button 
           onClick={() => setAbaAtiva('dashboard')}
@@ -179,12 +217,11 @@ export default function Admin() {
           onClick={() => setAbaAtiva('jogos')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${abaAtiva === 'jogos' ? 'bg-purple-600 text-white shadow-md' : 'text-purple-400/70 border border-purple-500/20 hover:bg-gray-700'}`}
         >
-          <Sparkles size={14} /> IMPORTAR IA
+          <DatabaseZap size={14} /> JOGOS / API
         </button>
       </div>
 
       <div className="p-4 space-y-6">
-        {/* ABA: Dashboard */}
         {abaAtiva === 'dashboard' && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -225,7 +262,6 @@ export default function Admin() {
           </div>
         )}
 
-        {/* ABA: Lançar Resultados */}
         {abaAtiva === 'resultados' && (
           <div className="space-y-4">
             <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-xl flex gap-3 items-start">
@@ -238,7 +274,6 @@ export default function Admin() {
             <div className="bg-gray-800 rounded-2xl p-4 border border-gray-700">
               <p className="text-xs font-bold text-gray-400 uppercase mb-4 text-center">Rodada 12 - Brasileirão</p>
               
-              {/* Jogo 1 Admin */}
               <div className="flex items-center justify-between gap-2 mb-4 bg-gray-900 p-3 rounded-xl">
                 <span className="text-xs font-bold w-1/3 text-right">Flamengo</span>
                 <div className="flex items-center gap-2">
@@ -256,7 +291,6 @@ export default function Admin() {
           </div>
         )}
 
-        {/* ABA: Repasses */}
         {abaAtiva === 'repasses' && (
           <div className="space-y-4">
             <div className="relative">
@@ -295,59 +329,59 @@ export default function Admin() {
         )}
 
         {abaAtiva === 'jogos' && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
-            <div className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-xl flex gap-3 items-start">
-              <Sparkles size={20} className="text-purple-400 shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-xs font-bold text-purple-300 uppercase">Motor Gemini 1.5 Ativo</h4>
-                <p className="text-[10px] text-purple-200/70 leading-relaxed mt-1">
-                  Cole o texto bruto de qualquer site (GE, CBF, ESPN). A IA vai identificar times, horários e estádios automaticamente.
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-gray-800 rounded-2xl p-5 border border-gray-700 space-y-4 shadow-xl">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Rodada</label>
-                  <input 
-                    type="number" 
-                    value={rodadaIA}
-                    onChange={(e) => setRodadaIA(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-sm outline-none focus:border-purple-500"
-                  />
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+            
+            <div className="bg-gray-800 rounded-2xl p-5 border border-brazil-green/30 shadow-xl shadow-brazil-green/5 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-1 h-full bg-brazil-green"></div>
+              <div className="flex gap-3 items-start mb-4">
+                <div className="bg-brazil-green/20 p-2 rounded-lg">
+                  <DatabaseZap size={24} className="text-brazil-green" />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Campeonato</label>
-                  <select 
-                    value={categoriaIA}
-                    onChange={(e) => setCategoriaIA(e.target.value as any)}
-                    className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-sm outline-none focus:border-purple-500"
-                  >
-                    <option value="brasileirao">Brasileirão</option>
-                    <option value="copa">Copa do Mundo</option>
-                  </select>
+                <div>
+                  <h4 className="font-black text-white text-sm uppercase">Automação Oficial (API)</h4>
+                  <p className="text-[10px] text-gray-400 mt-1">Busca a próxima rodada do Brasileirão direto na fonte mundial.</p>
                 </div>
               </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Texto dos Jogos</label>
-                <textarea 
-                  value={textoIA}
-                  onChange={(e) => setTextoIA(e.target.value)}
-                  placeholder="Ex: Sáb 13/04 18:30 Criciúma x Vitória Heriberto Hülse..."
-                  className="w-full h-40 bg-gray-900 border border-gray-700 rounded-xl p-4 text-xs outline-none focus:border-purple-500 font-mono"
-                />
-              </div>
-
+              
               <button 
-                onClick={processarJogosComIA}
+                onClick={puxarJogosDaAPI}
                 disabled={loadingIA}
-                className="w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-black py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 uppercase text-xs tracking-wider"
+                className="w-full bg-brazil-green hover:bg-[#009045] disabled:opacity-50 text-white font-black py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 uppercase text-xs tracking-wider"
               >
-                {loadingIA ? "Processando com IA..." : "Cadastrar Rodada no Calendário"}
+                {loadingIA ? "Sincronizando..." : "🤖 Puxar Próxima Rodada Automático"}
               </button>
             </div>
+
+            <div className="bg-gray-800 rounded-2xl p-5 border border-gray-700 shadow-xl opacity-80 hover:opacity-100 transition-opacity">
+              <div className="flex gap-3 items-start mb-4">
+                <Sparkles size={16} className="text-purple-400 mt-1" />
+                <div>
+                  <h4 className="text-xs font-bold text-purple-300 uppercase">Motor Gemini IA (Manual)</h4>
+                  <p className="text-[10px] text-purple-200/70 mt-1">Use apenas para campeonatos menores ou Copa.</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Rodada</label>
+                    <input type="number" value={rodadaIA} onChange={(e) => setRodadaIA(e.target.value)} className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-sm outline-none focus:border-purple-500" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Campeonato</label>
+                    <select value={categoriaIA} onChange={(e) => setCategoriaIA(e.target.value as any)} className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-sm outline-none focus:border-purple-500">
+                      <option value="brasileirao">Brasileirão</option>
+                      <option value="copa">Copa do Mundo</option>
+                    </select>
+                  </div>
+                </div>
+                <textarea value={textoIA} onChange={(e) => setTextoIA(e.target.value)} placeholder="Cole o texto bruto aqui..." className="w-full h-24 bg-gray-900 border border-gray-700 rounded-xl p-4 text-xs outline-none focus:border-purple-500 font-mono" />
+                <button onClick={processarJogosComIA} disabled={loadingIA} className="w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 uppercase text-xs">
+                  {loadingIA ? "Processando..." : "Importar com IA"}
+                </button>
+              </div>
+            </div>
+
           </div>
         )}
       </div>

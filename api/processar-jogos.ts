@@ -10,7 +10,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Falta a chave GEMINI_API_KEY na Vercel.' });
   }
 
-  // BALA DE PRATA: Usamos o gemini-pro (1.0). É universal, gratuito e imune ao erro 404.
+  // BALA DE PRATA: Usamos o gemini-pro (1.0). É universal, gratuito e imune ao erro 404 de região/faturamento.
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
 
   const payload = {
@@ -44,7 +44,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const aiText = data.candidates[0].content.parts[0].text;
     
-    // Limpeza bruta de markdown caso a IA tente colocar ```json
+    // Limpeza bruta de markdown caso a IA tente colocar "```json"
     const cleanJson = aiText.replace(/```json|```/g, "").trim();
     
     return res.status(200).json(JSON.parse(cleanJson));

@@ -16,8 +16,7 @@ export default function Indique() {
   };
 
   const compartilharWhatsApp = () => {
-    // Texto persuasivo já configurado para o clique
-    const texto = `Fala parceiro! Baixei o app do Bolão Brasil pra gente organizar nossas ligas com Pix automático. Usa meu código de convite *${referralCode}* pra entrar. Acesse: https://seu-bolao-url.vercel.app`;
+    const texto = `Fala parceiro! Baixei o app do Bolão Brasil pra gente organizar nossas ligas com Pix automático. Usa meu código de convite *${referralCode}* pra entrar. Acesse: https://bolaobrasil.app.br`;
     window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
   };
 
