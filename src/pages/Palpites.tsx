@@ -5,10 +5,13 @@ import { db, auth } from '../lib/firebase';
 import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
 import { Trophy, ArrowLeft, ShieldCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
 
+// 1. ADICIONADO: logoHome e logoAway na interface para o frontend reconhecer a imagem
 interface Jogo {
   id: string;
   home: string;
   away: string;
+  logoHome?: string;
+  logoAway?: string;
   data?: string;
   hora?: string;
   estadio?: string;
@@ -22,7 +25,6 @@ export default function Palpites() {
   const [salvando, setSalvando] = useState(false);
   const [sucesso, setSucesso] = useState(false);
 
-  // Busca os jogos que a IA cadastrou no banco de dados
   useEffect(() => {
     const fetchJogos = async () => {
       try {
@@ -42,7 +44,6 @@ export default function Palpites() {
   }, []);
 
   const handleScoreChange = (jogoId: string, team: 'home' | 'away', value: string) => {
-    // Permite apenas números (0-9) e máximo de 2 dígitos
     const numericValue = value.replace(/\D/g, '').slice(0, 2);
     setPalpites(prev => ({
       ...prev,
@@ -61,7 +62,6 @@ export default function Palpites() {
       return;
     }
 
-    // Verifica se preencheu todos os jogos disponíveis
     if (Object.keys(palpites).length < jogos.length || jogos.length === 0) {
       alert("Preencha o placar de todos os jogos antes de salvar!");
       return;
@@ -69,7 +69,6 @@ export default function Palpites() {
 
     setSalvando(true);
     try {
-      // Salva os palpites na subcoleção do usuário
       for (const jogoId of Object.keys(palpites)) {
         const palpiteRef = doc(db, `usuarios/${user.uid}/palpites`, jogoId);
         await setDoc(palpiteRef, {
@@ -117,7 +116,6 @@ export default function Palpites() {
     <div className="p-4 space-y-6 max-w-md mx-auto pb-24 bg-gray-50 min-h-screen">
       <Helmet><title>Cravar Palpites | Bolão Brasil</title></Helmet>
 
-      {/* Cabeçalho */}
       <div className="flex items-center gap-3 mb-6 mt-2">
         <button onClick={() => navigate(-1)} className="p-2 bg-white rounded-full text-gray-600 shadow-sm border border-gray-100 hover:bg-gray-50">
           <ArrowLeft size={20} />
@@ -141,7 +139,6 @@ export default function Palpites() {
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Alerta de Dica */}
           <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex gap-3 items-start">
             <Trophy size={16} className="text-blue-500 mt-0.5 shrink-0" />
             <p className="text-[10px] text-blue-800 font-medium leading-relaxed">
@@ -149,7 +146,6 @@ export default function Palpites() {
             </p>
           </div>
 
-          {/* Lista de Jogos */}
           {jogos.map((jogo) => (
             <div key={jogo.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brazil-green to-brazil-yellow"></div>
@@ -160,12 +156,18 @@ export default function Palpites() {
               </div>
 
               <div className="flex items-center justify-between gap-4">
-                {/* Time Casa */}
-                <div className="flex flex-col items-center flex-1">
+                {/* 2. ADICIONADO: Escudo do Time Casa */}
+                <div className="flex flex-col items-center flex-1 gap-2">
+                  {jogo.logoHome ? (
+                    <img src={jogo.logoHome} alt={jogo.home} className="w-10 h-10 object-contain drop-shadow-sm" />
+                  ) : (
+                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center border border-gray-200">
+                      <ShieldCheck size={20} className="text-gray-300" />
+                    </div>
+                  )}
                   <span className="font-bold text-sm text-gray-800 text-center uppercase truncate w-full">{jogo.home}</span>
                 </div>
 
-                {/* Placar Inputs */}
                 <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl border border-gray-200">
                   <input
                     type="text"
@@ -184,15 +186,21 @@ export default function Palpites() {
                   />
                 </div>
 
-                {/* Time Visitante */}
-                <div className="flex flex-col items-center flex-1">
+                {/* 3. ADICIONADO: Escudo do Time Visitante */}
+                <div className="flex flex-col items-center flex-1 gap-2">
+                  {jogo.logoAway ? (
+                    <img src={jogo.logoAway} alt={jogo.away} className="w-10 h-10 object-contain drop-shadow-sm" />
+                  ) : (
+                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center border border-gray-200">
+                      <ShieldCheck size={20} className="text-gray-300" />
+                    </div>
+                  )}
                   <span className="font-bold text-sm text-gray-800 text-center uppercase truncate w-full">{jogo.away}</span>
                 </div>
               </div>
             </div>
           ))}
 
-          {/* Botão Salvar */}
           <button 
             onClick={handleSalvarPalpites}
             disabled={salvando}
