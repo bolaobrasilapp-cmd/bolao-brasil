@@ -14,6 +14,9 @@ interface Jogo {
   data?: string;
   hora?: string;
   estadio?: string;
+  encerrado?: boolean;
+  scoreHomeReal?: number;
+  scoreAwayReal?: number;
 }
 
 // O CÉREBRO DAS IMAGENS: Traduz o nome do banco para o arquivo exato da sua pasta
@@ -52,6 +55,7 @@ export default function Palpites() {
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [sucesso, setSucesso] = useState(false);
+  const [abaExibicao, setAbaExibicao] = useState<'proximos' | 'encerrados'>('proximos');
 
   useEffect(() => {
     const fetchJogos = async () => {
@@ -90,8 +94,10 @@ export default function Palpites() {
       return;
     }
 
-    if (Object.keys(palpites).length < jogos.length || jogos.length === 0) {
-      alert("Preencha o placar de todos os jogos antes de salvar!");
+    const jogosPendentes = jogos.filter(j => !j.encerrado);
+
+    if (Object.keys(palpites).length < jogosPendentes.length || jogosPendentes.length === 0) {
+      alert("Preencha o placar de todos os jogos abertos antes de salvar!");
       return;
     }
 
@@ -140,11 +146,17 @@ export default function Palpites() {
     );
   }
 
+  // DIVIDE OS JOGOS COM BASE NO STATUS 'ENCERRADO'
+  const jogosProximos = jogos.filter(j => !j.encerrado);
+  const jogosAnteriores = jogos.filter(j => j.encerrado);
+
+  const jogosRenderizados = abaExibicao === 'proximos' ? jogosProximos : jogosAnteriores;
+
   return (
     <div className="p-4 space-y-6 max-w-md mx-auto pb-24 bg-gray-50 min-h-screen">
       <Helmet><title>Cravar Palpites | Bolão Brasil</title></Helmet>
 
-      <div className="flex items-center gap-3 mb-6 mt-2">
+      <div className="flex items-center gap-3 mb-4 mt-2">
         <button onClick={() => navigate(-1)} className="p-2 bg-white rounded-full text-gray-600 shadow-sm border border-gray-100 hover:bg-gray-50">
           <ArrowLeft size={20} />
         </button>
@@ -154,35 +166,63 @@ export default function Palpites() {
         </div>
       </div>
 
+      {/* NOVO: ABAS DE NAVEGAÇÃO PARA SEPARAR OS JOGOS */}
+      <div className="flex bg-white rounded-xl border border-gray-100 p-1 shadow-sm mb-6">
+        <button 
+          onClick={() => setAbaExibicao('proximos')}
+          className={`flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-lg transition-all ${
+            abaExibicao === 'proximos' ? 'bg-brazil-blue text-white shadow-md' : 'text-gray-400 hover:text-brazil-blue'
+          }`}
+        >
+          Próximos
+        </button>
+        <button 
+          onClick={() => setAbaExibicao('encerrados')}
+          className={`flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-lg transition-all ${
+            abaExibicao === 'encerrados' ? 'bg-gray-800 text-white shadow-md' : 'text-gray-400 hover:text-gray-800'
+          }`}
+        >
+          Encerrados
+        </button>
+      </div>
+
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 opacity-50">
           <div className="w-8 h-8 border-4 border-brazil-green border-t-brazil-yellow rounded-full animate-spin mb-4" />
           <p className="text-xs font-bold uppercase tracking-widest">Buscando Jogos...</p>
         </div>
-      ) : jogos.length === 0 ? (
+      ) : jogosRenderizados.length === 0 ? (
         <div className="bg-white p-8 rounded-2xl border border-gray-100 text-center space-y-4">
           <AlertCircle size={40} className="text-gray-300 mx-auto" />
-          <h3 className="font-bold text-gray-800">Nenhum jogo na rodada</h3>
-          <p className="text-xs text-gray-500">O organizador (Admin) ainda não importou os jogos desta rodada via IA.</p>
+          <h3 className="font-bold text-gray-800">
+            {abaExibicao === 'proximos' ? 'Nenhum jogo na rodada' : 'Nenhuma partida encerrada ainda'}
+          </h3>
+          <p className="text-xs text-gray-500">
+            {abaExibicao === 'proximos' 
+              ? 'O organizador (Admin) ainda não importou os jogos desta rodada via IA.'
+              : 'Os resultados oficiais aparecerão aqui após o fim dos jogos.'}
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex gap-3 items-start">
-            <Trophy size={16} className="text-blue-500 mt-0.5 shrink-0" />
-            <p className="text-[10px] text-blue-800 font-medium leading-relaxed">
-              <strong>Placar exato:</strong> 25 pts | <strong>Vencedor e Saldo:</strong> 15 pts | <strong>Só Vencedor:</strong> 10 pts
-            </p>
-          </div>
+          
+          {/* MENSAGEM DE PONTUAÇÃO (Apenas para Próximos) */}
+          {abaExibicao === 'proximos' && (
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex gap-3 items-start">
+              <Trophy size={16} className="text-blue-500 mt-0.5 shrink-0" />
+              <p className="text-[10px] text-blue-800 font-medium leading-relaxed">
+                <strong>Placar exato:</strong> 25 pts | <strong>Vencedor e Saldo:</strong> 15 pts | <strong>Só Vencedor:</strong> 10 pts
+              </p>
+            </div>
+          )}
 
-          {jogos.map((jogo) => {
-            // Aplica a lógica: Tenta puxar a sua imagem local PRIMEIRO. 
-            // Se não tiver, tenta a da API. Se não tiver nenhuma, usa null (escudo cinza).
+          {jogosRenderizados.map((jogo) => {
             const escudoCasa = getEscudoLocal(jogo.home) || jogo.logoHome;
             const escudoVisitante = getEscudoLocal(jogo.away) || jogo.logoAway;
 
             return (
               <div key={jogo.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brazil-green to-brazil-yellow"></div>
+                <div className={`absolute top-0 left-0 w-full h-1 ${abaExibicao === 'proximos' ? 'bg-gradient-to-r from-brazil-green to-brazil-yellow' : 'bg-gray-300'}`}></div>
                 
                 <div className="text-center mb-4 mt-1">
                   <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{jogo.data || 'Data a definir'} • {jogo.hora || '16:00'}</p>
@@ -203,22 +243,37 @@ export default function Palpites() {
                     <span className="font-bold text-sm text-gray-800 text-center uppercase truncate w-full">{jogo.home}</span>
                   </div>
 
+                  {/* CENTRO: INPUTS (Próximos) OU PLACAR OFICIAL (Encerrados) */}
                   <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl border border-gray-200">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={palpites[jogo.id]?.home || ''}
-                      onChange={(e) => handleScoreChange(jogo.id, 'home', e.target.value)}
-                      className="w-10 h-10 bg-white border border-gray-300 rounded-lg text-center font-black text-lg focus:border-brazil-blue focus:ring-2 focus:ring-brazil-blue/20 outline-none transition-all"
-                    />
-                    <span className="text-gray-400 font-black text-sm">X</span>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={palpites[jogo.id]?.away || ''}
-                      onChange={(e) => handleScoreChange(jogo.id, 'away', e.target.value)}
-                      className="w-10 h-10 bg-white border border-gray-300 rounded-lg text-center font-black text-lg focus:border-brazil-blue focus:ring-2 focus:ring-brazil-blue/20 outline-none transition-all"
-                    />
+                    {abaExibicao === 'proximos' ? (
+                      <>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={palpites[jogo.id]?.home || ''}
+                          onChange={(e) => handleScoreChange(jogo.id, 'home', e.target.value)}
+                          className="w-10 h-10 bg-white border border-gray-300 rounded-lg text-center font-black text-lg focus:border-brazil-blue focus:ring-2 focus:ring-brazil-blue/20 outline-none transition-all"
+                        />
+                        <span className="text-gray-400 font-black text-sm">X</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={palpites[jogo.id]?.away || ''}
+                          onChange={(e) => handleScoreChange(jogo.id, 'away', e.target.value)}
+                          className="w-10 h-10 bg-white border border-gray-300 rounded-lg text-center font-black text-lg focus:border-brazil-blue focus:ring-2 focus:ring-brazil-blue/20 outline-none transition-all"
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-10 h-10 bg-gray-800 text-white rounded-lg flex items-center justify-center font-black text-lg">
+                          {jogo.scoreHomeReal ?? '-'}
+                        </div>
+                        <span className="text-gray-400 font-black text-sm">X</span>
+                        <div className="w-10 h-10 bg-gray-800 text-white rounded-lg flex items-center justify-center font-black text-lg">
+                          {jogo.scoreAwayReal ?? '-'}
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Time Visitante */}
@@ -233,22 +288,34 @@ export default function Palpites() {
                     <span className="font-bold text-sm text-gray-800 text-center uppercase truncate w-full">{jogo.away}</span>
                   </div>
                 </div>
+                
+                {/* AVISO DE FIM DE JOGO */}
+                {abaExibicao === 'encerrados' && (
+                  <div className="mt-4 pt-3 border-t border-gray-100 flex justify-center">
+                    <span className="text-[10px] bg-gray-100 text-gray-500 font-bold px-3 py-1 rounded-full uppercase tracking-widest">Partida Encerrada</span>
+                  </div>
+                )}
               </div>
             );
           })}
 
-          <button 
-            onClick={handleSalvarPalpites}
-            disabled={salvando}
-            className="w-full bg-brazil-blue text-white font-black py-4 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:bg-blue-900 disabled:opacity-50 transition-all uppercase text-xs tracking-wider mt-6"
-          >
-            {salvando ? 'Salvando Palpites...' : 'Salvar e Ir para Pagamento'}
-          </button>
-          
-          <div className="flex items-center justify-center gap-1 mt-3">
-            <ShieldCheck size={12} className="text-brazil-green" />
-            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Transação segura 256-bit</span>
-          </div>
+          {/* BOTÃO DE SALVAR (Apenas para Próximos) */}
+          {abaExibicao === 'proximos' && (
+            <>
+              <button 
+                onClick={handleSalvarPalpites}
+                disabled={salvando}
+                className="w-full bg-brazil-blue text-white font-black py-4 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:bg-blue-900 disabled:opacity-50 transition-all uppercase text-xs tracking-wider mt-6"
+              >
+                {salvando ? 'Salvando Palpites...' : 'Salvar e Ir para Pagamento'}
+              </button>
+              
+              <div className="flex items-center justify-center gap-1 mt-3">
+                <ShieldCheck size={12} className="text-brazil-green" />
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Transação segura 256-bit</span>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
