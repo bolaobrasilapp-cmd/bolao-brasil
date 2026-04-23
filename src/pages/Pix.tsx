@@ -1,19 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Copy, CheckCircle2, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext'; // IMPORTAÇÃO DO BANCO
 
 const Pix: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth(); // PUXA OS DADOS DO USUÁRIO LOGADO
+
   const [loading, setLoading] = useState(false);
   const [pixData, setPixData] = useState<{ copiaECola: string, qrCodeImage: string } | null>(null);
   const [copiado, setCopiado] = useState(false);
   const [erro, setErro] = useState('');
 
-  // Formulário rápido para a Efí validar quem está pagando
+  // Formulário rápido para a Efí
   const [form, setForm] = useState({ nome: '', cpf: '' });
 
+  // AUTO-PREENCHIMENTO: Puxa do Firebase e joga no form do Pix
+  useEffect(() => {
+    if (user) {
+      setForm({
+        nome: user.nome || '',
+        cpf: user.cpf || ''
+      });
+    }
+  }, [user]);
+
   const handleGerarPix = async () => {
-    // Validação básica para evitar recusa do banco
     if (form.nome.length < 3 || form.cpf.length < 11) {
       setErro("Preencha o nome e o CPF com 11 números para o banco aceitar.");
       return;
@@ -30,11 +42,10 @@ const Pix: React.FC = () => {
           valor: 20.00,
           cpf: form.cpf,
           nome: form.nome,
-          uid: user?.uid, // <-- LINHA VITAL: Avisa ao robô quem vai ganhar o saldo
+          uid: user?.uid, // AGORA SIM: Envia quem é o dono do Pix pro banco
           descricao: 'Cota Bolão Primeira Liga'
         })
       });
-      // ... resto do código igual
 
       const data = await response.json();
 

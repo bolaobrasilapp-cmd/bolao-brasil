@@ -24,8 +24,14 @@ export default function Perfil() {
     localStorage.setItem('@BolaoBrasil:pixKey', pixKey);
   }, [pixKey]);
 
+  // EFEITO: Escuta o Firebase e auto-preenche a tela para não resetar!
   useEffect(() => {
-    if (user?.nome && !nome) setNome(user.nome);
+    if (user) {
+      if (user.nome && !nome) setNome(user.nome);
+      if (user.cpf && !cpf) setCpf(user.cpf);
+      if (user.dataNascimento && !dataNascimento) setDataNascimento(user.dataNascimento);
+      if (user.pixKey && !pixKey) setPixKey(user.pixKey);
+    }
   }, [user]);
 
   useEffect(() => {
