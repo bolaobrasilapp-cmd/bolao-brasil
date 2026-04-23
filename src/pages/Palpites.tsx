@@ -146,9 +146,22 @@ export default function Palpites() {
     );
   }
 
-  // DIVIDE OS JOGOS COM BASE NO STATUS 'ENCERRADO'
-  const jogosProximos = jogos.filter(j => !j.encerrado);
-  const jogosAnteriores = jogos.filter(j => j.encerrado);
+  // BLINDAGEM DE TEMPO: Verifica se a data e hora já passaram
+  const isJogoPassado = (dataStr?: string, horaStr?: string) => {
+    if (!dataStr) return false;
+    const [dia, mes] = dataStr.split('/');
+    const [hora, min] = (horaStr || '00:00').split(':');
+    
+    // Cria a data do jogo no formato oficial (Ano, Mês-1, Dia, Hora, Minuto)
+    const dataJogo = new Date(new Date().getFullYear(), Number(mes) - 1, Number(dia), Number(hora), Number(min));
+    const agora = new Date();
+    
+    return dataJogo < agora; // Retorna true se o jogo já passou
+  };
+
+  // DIVIDE OS JOGOS (Filtro Duplo: Firebase + Relógio do Celular)
+  const jogosProximos = jogos.filter(j => !j.encerrado && !isJogoPassado(j.data, j.hora));
+  const jogosAnteriores = jogos.filter(j => j.encerrado || isJogoPassado(j.data, j.hora));
 
   const jogosRenderizados = abaExibicao === 'proximos' ? jogosProximos : jogosAnteriores;
 
